@@ -1,0 +1,20 @@
+title: Scheduled Task Created via Command Line
+id: 12345678-abcd-ef01-2345-678901234567
+status: stable
+level: medium
+description: Detects scheduled task creation via schtasks.exe which may indicate persistence
+author: ThreatLens Test
+date: 2025/01/15
+tags:
+    - attack.persistence
+    - attack.t1053.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains: '/create'
+    condition: selection
+falsepositives:
+    - Legitimate task scheduling by administrators

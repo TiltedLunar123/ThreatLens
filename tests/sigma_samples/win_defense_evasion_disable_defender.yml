@@ -1,0 +1,25 @@
+title: Windows Defender Disabled via Registry
+id: f1e2d3c4-b5a6-9870-fedc-ba0987654321
+status: experimental
+level: high
+description: Detects attempt to disable Windows Defender through registry modification
+author: ThreatLens Test
+date: 2025/01/15
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        EventID: 13
+        CommandLine|contains|all:
+            - 'DisableAntiSpyware'
+            - 'DWORD'
+            - '1'
+    filter:
+        User|contains: 'SYSTEM'
+    condition: selection and not filter
+falsepositives:
+    - Group policy updates

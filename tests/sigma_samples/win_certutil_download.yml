@@ -1,0 +1,21 @@
+title: Certutil Download Cradle
+id: test-003
+status: experimental
+description: Detects certutil being used to download files from the internet
+author: ThreatLens Test Suite
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        CommandLine|contains|all:
+            - 'certutil'
+            - '-urlcache'
+            - '-f'
+    condition: selection
+level: high
+tags:
+    - attack.command_and_control
+    - attack.t1105
+falsepositives:
+    - Legitimate certificate management

@@ -1,0 +1,23 @@
+title: Suspicious Encoded PowerShell Command Line
+id: test-001
+status: experimental
+description: Detects PowerShell with encoded command line arguments
+author: ThreatLens Test Suite
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        CommandLine|contains:
+            - '-encodedcommand'
+            - '-enc '
+            - '-e '
+    filter:
+        CommandLine|contains: 'legitimate'
+    condition: selection and not filter
+level: high
+tags:
+    - attack.execution
+    - attack.t1059.001
+falsepositives:
+    - Legitimate admin scripts using encoding

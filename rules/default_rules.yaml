@@ -1,0 +1,26 @@
+# ThreatLens Default Detection Configuration
+# Adjust thresholds to tune sensitivity for your environment.
+
+brute_force:
+  # Number of failed logons from one source to trigger an alert
+  brute_force_threshold: 5
+  # Time window in seconds to look for burst patterns
+  brute_force_window: 300
+
+lateral_movement:
+  # Number of distinct hosts a single account must touch to trigger
+  lateral_host_threshold: 3
+  # Time window in seconds
+  lateral_window: 600
+
+privilege_escalation:
+  # No additional config needed; flags any non-system account
+  # receiving sensitive privileges
+
+suspicious_process:
+  # No additional config needed; uses built-in LOLBin and regex lists
+
+# ── Attack Chain Correlation ────────────────────────────────────────────
+attack_chain:
+  chain_window: 3600       # Seconds to look for multi-stage activity
+  chain_min_stages: 2      # Minimum kill chain stages to trigger

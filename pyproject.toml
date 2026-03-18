@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "threatlens"
+version = "1.1.0"
+description = "Log Analysis & Threat Hunting CLI"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Jude Hilgendorf" }]
+keywords = ["security", "log-analysis", "threat-hunting", "siem", "sigma"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+]
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["threatlens*"]
+
+[project.optional-dependencies]
+evtx = [
+    "python-evtx>=0.7.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+threatlens = "threatlens.cli:main"
+
+[project.urls]
+Repository = "https://github.com/TiltedLunar123/ThreatLens"
+Issues = "https://github.com/TiltedLunar123/ThreatLens/issues"
+
+# ── Ruff (linter + formatter) ───────────────────────────────────────────────
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "SIM108", # ternary operator suggestion
+    "B010",   # setattr with constant
+    "RUF012", # mutable class variables
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["threatlens"]
+
+# ── Pytest ───────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+# ── Coverage ─────────────────────────────────────────────────────────────────
+
+[tool.coverage.run]
+source = ["threatlens"]
+omit = ["threatlens/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]

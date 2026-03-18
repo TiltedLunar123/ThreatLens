@@ -1,0 +1,23 @@
+title: Suspicious Sudo Command Execution
+id: 87f9a7c0-1e2f-4a5b-8c3d-9e4f6a7b8c9d
+status: stable
+level: medium
+description: Detects suspicious sudo command usage that could indicate privilege escalation
+author: ThreatLens Test
+date: 2025/01/15
+tags:
+    - attack.privilege_escalation
+    - attack.t1548.003
+logsource:
+    product: linux
+    service: auth
+detection:
+    selection:
+        CommandLine|contains:
+            - 'sudo -i'
+            - 'sudo su'
+            - 'sudo bash'
+            - 'sudo /bin/sh'
+    condition: selection
+falsepositives:
+    - Legitimate system administration
