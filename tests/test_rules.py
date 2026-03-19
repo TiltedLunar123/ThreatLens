@@ -285,16 +285,15 @@ class TestYamlRules:
             rules = load_yaml_rules(Path(f.name))
         assert len(rules) == 1
 
-    def test_unknown_operator_is_skipped(self):
-        rule = YamlRule({
-            "name": "Unknown Op",
-            "conditions": [{"field": "event_id", "operator": "banana", "value": "4625"}],
-            "threshold": 1,
-        })
-        events = [make_failed_logon(datetime(2025, 1, 15, 8, 30, 0))]
-        # Unknown operator is skipped (continue), so condition passes vacuously
-        alerts = rule.analyze(events)
-        assert len(alerts) == 1
+    def test_unknown_operator_is_rejected(self):
+        import pytest  # noqa: I001
+        from threatlens.rules.yaml_rules import RuleValidationError
+        with pytest.raises(RuleValidationError, match="invalid operator"):
+            YamlRule({
+                "name": "Unknown Op",
+                "conditions": [{"field": "event_id", "operator": "banana", "value": "4625"}],
+                "threshold": 1,
+            })
 
     def test_group_by_zero_window(self):
         from datetime import timedelta

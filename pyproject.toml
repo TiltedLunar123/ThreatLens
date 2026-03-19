@@ -37,6 +37,10 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.4.0",
+    "hypothesis>=6.0",
+]
+enrichment = [
+    "geoip2>=4.0",
 ]
 
 [project.scripts]
@@ -77,7 +81,7 @@ known-first-party = ["threatlens"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --cov=threatlens --cov-fail-under=80"
 
 # ── Coverage ─────────────────────────────────────────────────────────────────
 

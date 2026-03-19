@@ -344,7 +344,7 @@ class SigmaRule(DetectionRule):
                         mitre_technique=self.mitre_technique,
                         recommendation=self._recommendation,
                     ))
-            except Exception:
+            except (ValueError, KeyError, TypeError, re.error):
                 continue
 
         return alerts

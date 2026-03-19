@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -21,6 +23,8 @@ from threatlens.report import (
     print_banner,
     print_summary,
 )
+
+logger = logging.getLogger("threatlens")
 
 # File extensions recognized per input format
 _FORMAT_EXTENSIONS: dict[str, list[str]] = {
@@ -67,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan_parser.add_argument(
         "--format", "-f",
-        choices=["json", "csv", "html"],
+        choices=["json", "csv", "html", "sarif"],
         default="json",
         help="Output format (default: json)",
     )
@@ -127,7 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--elastic-api-key",
         type=str,
         default=None,
-        help="Elasticsearch API key for authentication",
+        help="Elasticsearch API key (or set THREATLENS_ES_API_KEY env var)",
     )
     scan_parser.add_argument(
         "--timeline",
@@ -161,6 +165,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Path to a YAML allowlist file for suppressing known-good alerts",
+    )
+    scan_parser.add_argument(
+        "--log-level",
+        choices=["debug", "info", "warning", "error"],
+        default=None,
+        help="Set logging verbosity (default: warning, or debug if --verbose)",
+    )
+    scan_parser.add_argument(
+        "--geoip-db",
+        type=str,
+        default=None,
+        help="Path to MaxMind GeoLite2-City.mmdb for IP geolocation enrichment",
+    )
+    scan_parser.add_argument(
+        "--threat-intel",
+        type=str,
+        default=None,
+        help="Path to a threat intel IP list (one IP per line) for reputation tagging",
     )
 
     # --- follow command ---
@@ -373,7 +395,7 @@ def run_scan(args: argparse.Namespace) -> int:
             all_events.extend(events)
             if not args.quiet:
                 print(f"  Parsed {len(events):>6,} events from {log_file.name}")
-        except Exception as e:
+        except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError) as e:
             print(f"  Warning: Failed to parse {log_file.name}: {e}", file=sys.stderr)
 
     if not all_events:
@@ -399,6 +421,7 @@ def run_scan(args: argparse.Namespace) -> int:
             all_alerts.extend(alerts)
         except Exception as e:
             name = getattr(detector, "name", detector.__class__.__name__)
+            logger.warning("Detector '%s' failed: %s", name, e)
             print(f"  Warning: Detector '{name}' failed: {e}", file=sys.stderr)
 
     elapsed = time.time() - start_time
@@ -408,6 +431,14 @@ def run_scan(args: argparse.Namespace) -> int:
     min_sev = Severity(args.min_severity)
     min_index = severity_order.index(min_sev)
     filtered = [a for a in all_alerts if severity_order.index(a.severity) >= min_index]
+
+    # GeoIP / threat intel enrichment
+    geoip_db = getattr(args, "geoip_db", None)
+    threat_intel = getattr(args, "threat_intel", None)
+    if geoip_db or threat_intel:
+        from threatlens.enrichment.geoip import GeoIPEnricher
+        with GeoIPEnricher(geoip_db=geoip_db, threat_intel_file=threat_intel) as enricher:
+            enricher.enrich_alerts(all_alerts)
 
     # Apply allowlist suppression
     allowlist_path = getattr(args, "allowlist", None)
@@ -443,6 +474,9 @@ def run_scan(args: argparse.Namespace) -> int:
         elif args.format == "html":
             from threatlens.outputs.html_report import export_html
             export_html(filtered, output_path, len(all_events), elapsed)
+        elif args.format == "sarif":
+            from threatlens.outputs.sarif import export_sarif
+            export_sarif(filtered, output_path, len(all_events))
         else:
             export_json(filtered, output_path, len(all_events))
         print(f"  Report saved to {output_path}\n")
@@ -457,12 +491,13 @@ def run_scan(args: argparse.Namespace) -> int:
     # Send to Elasticsearch if requested
     if args.elastic_url:
         from threatlens.outputs.elasticsearch import send_to_elasticsearch
+        es_api_key = args.elastic_api_key or os.environ.get("THREATLENS_ES_API_KEY")
         success, errors = send_to_elasticsearch(
             filtered,
             es_url=args.elastic_url,
             index=args.elastic_index,
             total_events=len(all_events),
-            api_key=args.elastic_api_key,
+            api_key=es_api_key,
         )
         print(f"  Elasticsearch: {success} indexed, {errors} errors\n")
 
@@ -499,6 +534,27 @@ def run_follow(args: argparse.Namespace) -> int:
     buffer = []
     last_flush = time.time()
     seen_alerts: set[str] = set()
+    stats: dict[str, int] = {"events": 0, "alerts": 0}
+
+    def _print_status_bar() -> None:
+        """Print a live status bar showing event/alert counts."""
+        from threatlens.utils import BOLD, RESET, _no_color
+        elapsed = time.time() - start_time
+        mins, secs = divmod(int(elapsed), 60)
+        bar_parts = [
+            f"Events: {stats['events']:,}",
+            f"Alerts: {stats.get('alerts', 0)}",
+            f"Buffer: {len(buffer)}",
+            f"Uptime: {mins:02d}:{secs:02d}",
+        ]
+        bar = " | ".join(bar_parts)
+        if _no_color:
+            status = f"\r  [{bar}]"
+        else:
+            status = f"\r  {BOLD}[{bar}]{RESET}"
+        print(status, end="", flush=True)
+
+    start_time = time.time()
 
     try:
         with open(target, encoding="utf-8", errors="replace") as f:
@@ -510,17 +566,21 @@ def run_follow(args: argparse.Namespace) -> int:
                 if not line:
                     now = time.time()
                     if buffer and (now - last_flush) >= args.flush_interval:
+                        print("\r" + " " * 80 + "\r", end="")  # clear status bar
                         _flush_follow_buffer(
-                            buffer, detectors, severity_order, min_index, seen_alerts
+                            buffer, detectors, severity_order, min_index, seen_alerts, stats
                         )
                         buffer.clear()
                         last_flush = now
+                    _print_status_bar()
                     time.sleep(0.1)
                     continue
 
                 line = line.strip()
                 if not line:
                     continue
+
+                stats["events"] = stats.get("events", 0) + 1
 
                 event = None
                 try:
@@ -529,25 +589,28 @@ def run_follow(args: argparse.Namespace) -> int:
                     else:
                         entry = json.loads(line)
                         event = parse_event(entry)
-                except Exception:
+                except (json.JSONDecodeError, ValueError, KeyError):
                     continue
 
                 if event:
                     buffer.append(event)
 
                 if len(buffer) >= args.buffer_size:
+                    print("\r" + " " * 80 + "\r", end="")  # clear status bar
                     _flush_follow_buffer(
-                        buffer, detectors, severity_order, min_index, seen_alerts
+                        buffer, detectors, severity_order, min_index, seen_alerts, stats
                     )
                     buffer.clear()
                     last_flush = time.time()
 
     except KeyboardInterrupt:
+        print("\r" + " " * 80 + "\r", end="")  # clear status bar
         if buffer:
             _flush_follow_buffer(
-                buffer, detectors, severity_order, min_index, seen_alerts
+                buffer, detectors, severity_order, min_index, seen_alerts, stats
             )
-        print("\n  Stopped.\n")
+        print(f"\n  Stopped. ({stats['events']:,} events processed, "
+              f"{stats.get('alerts', 0)} alerts)\n")
         return 0
 
 
@@ -557,6 +620,7 @@ def _flush_follow_buffer(
     severity_order: list,
     min_index: int,
     seen_alerts: set[str],
+    stats: dict[str, int] | None = None,
 ) -> None:
     """Run detectors against buffered events and print new alerts."""
     from threatlens.utils import bold, colorize
@@ -575,6 +639,11 @@ def _flush_follow_buffer(
             if alert_key in seen_alerts:
                 continue
             seen_alerts.add(alert_key)
+
+            if stats is not None:
+                stats["alerts"] = stats.get("alerts", 0) + 1
+                sev_key = alert.severity.value
+                stats[sev_key] = stats.get(sev_key, 0) + 1
 
             sev_tag = colorize(f"[{alert.severity.value.upper()}]", alert.severity)
             print(f"  {sev_tag} {bold(alert.rule_name)}")
@@ -598,9 +667,30 @@ def run_rules() -> int:
     return 0
 
 
+def _configure_logging(args: argparse.Namespace) -> None:
+    """Set up structured logging based on CLI flags."""
+    if hasattr(args, "log_level") and args.log_level:
+        level = getattr(logging, args.log_level.upper())
+    elif getattr(args, "verbose", False):
+        level = logging.DEBUG
+    elif getattr(args, "quiet", False):
+        level = logging.ERROR
+    else:
+        level = logging.WARNING
+
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        stream=sys.stderr,
+    )
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+
+    _configure_logging(args)
 
     if args.command == "scan":
         return run_scan(args)

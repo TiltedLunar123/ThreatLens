@@ -342,10 +342,10 @@ def load_syslog_events(log_path: Path, fmt: str = "syslog") -> list[LogEvent]:
                 event = _parse_line(line, fmt)
                 if event:
                     events.append(event)
-            except Exception:
+            except Exception as e:
                 print(
                     f"  Warning: Skipping malformed line {line_num}: "
-                    f"{line[:80].strip()}{'...' if len(line) > 80 else ''}",
+                    f"{line[:80].strip()}{'...' if len(line) > 80 else ''} ({e})",
                     file=sys.stderr,
                 )
 

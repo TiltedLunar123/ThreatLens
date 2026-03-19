@@ -28,4 +28,7 @@ jobs:
         run: ruff check threatlens/ tests/
 
       - name: Run tests
-        run: pytest tests/ --cov=threatlens --cov-report=term-missing -v
+        run: pytest tests/ --cov=threatlens --cov-report=term-missing --cov-fail-under=80 -v
+
+      - name: Audit dependencies
+        run: pip install pip-audit && pip-audit

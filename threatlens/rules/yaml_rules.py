@@ -70,10 +70,58 @@ def _get_event_value(event: LogEvent, field: str) -> Any:
     return ""
 
 
+_REQUIRED_CONDITION_FIELDS = {"field", "operator"}
+_VALID_OPERATORS = set(_OPERATORS)
+_VALID_SEVERITIES = {"low", "medium", "high", "critical"}
+
+
+class RuleValidationError(ValueError):
+    """Raised when a YAML rule definition is invalid."""
+
+
+def validate_rule_def(rule_def: dict[str, Any], source: str = "") -> None:
+    """Validate a YAML rule definition and raise on structural errors."""
+    prefix = f" (from {source})" if source else ""
+
+    if not isinstance(rule_def, dict):
+        raise RuleValidationError(f"Rule must be a dict, got {type(rule_def).__name__}{prefix}")
+
+    conditions = rule_def.get("conditions")
+    if not conditions or not isinstance(conditions, list):
+        raise RuleValidationError(
+            f"Rule '{rule_def.get('name', '?')}' must have a non-empty 'conditions' list{prefix}"
+        )
+
+    for i, cond in enumerate(conditions):
+        if not isinstance(cond, dict):
+            raise RuleValidationError(
+                f"Condition {i} in rule '{rule_def.get('name', '?')}' must be a dict{prefix}"
+            )
+        missing = _REQUIRED_CONDITION_FIELDS - set(cond)
+        if missing:
+            raise RuleValidationError(
+                f"Condition {i} in rule '{rule_def.get('name', '?')}' missing required fields: {missing}{prefix}"
+            )
+        op = cond.get("operator", "")
+        if op not in _VALID_OPERATORS:
+            raise RuleValidationError(
+                f"Condition {i} in rule '{rule_def.get('name', '?')}' has invalid operator '{op}'. "
+                f"Valid operators: {sorted(_VALID_OPERATORS)}{prefix}"
+            )
+
+    severity = rule_def.get("severity", "medium")
+    if str(severity).lower() not in _VALID_SEVERITIES:
+        raise RuleValidationError(
+            f"Rule '{rule_def.get('name', '?')}' has invalid severity '{severity}'. "
+            f"Valid values: {sorted(_VALID_SEVERITIES)}{prefix}"
+        )
+
+
 class YamlRule(DetectionRule):
     """A detection rule defined in YAML configuration."""
 
     def __init__(self, rule_def: dict[str, Any]):
+        validate_rule_def(rule_def)
         self.name = rule_def.get("name", "Custom Rule")
         self.description = rule_def.get("description", "")
         self.mitre_tactic = rule_def.get("mitre_tactic", "")
@@ -230,7 +278,7 @@ def load_yaml_rules(rules_path: Path) -> list[YamlRule]:
             for rule_def in rule_list:
                 if isinstance(rule_def, dict) and "conditions" in rule_def:
                     rules.append(YamlRule(rule_def))
-        except Exception as e:
+        except (yaml.YAMLError, RuleValidationError, OSError, ValueError) as e:
             print(f"  Warning: Failed to load rules from {yaml_file}: {e}", file=sys.stderr)
 
     return rules
