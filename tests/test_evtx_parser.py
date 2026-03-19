@@ -142,9 +142,12 @@ class TestLoadEvtxEvents:
         mock_evtx_mod = MagicMock()
         mock_evtx_mod.Evtx.return_value = mock_log
 
+        mock_parent = MagicMock()
+        mock_parent.Evtx = mock_evtx_mod
+
         with (
             patch("threatlens.parsers.evtx_parser._ensure_evtx_available", return_value=True),
-            patch.dict("sys.modules", {"Evtx.Evtx": mock_evtx_mod}),
+            patch.dict("sys.modules", {"Evtx": mock_parent, "Evtx.Evtx": mock_evtx_mod}),
         ):
             events = load_evtx_events(Path("fake.evtx"))
         assert len(events) == 1
@@ -167,9 +170,12 @@ class TestLoadEvtxEvents:
         mock_evtx_mod = MagicMock()
         mock_evtx_mod.Evtx.return_value = mock_log
 
+        mock_parent = MagicMock()
+        mock_parent.Evtx = mock_evtx_mod
+
         with (
             patch("threatlens.parsers.evtx_parser._ensure_evtx_available", return_value=True),
-            patch.dict("sys.modules", {"Evtx.Evtx": mock_evtx_mod}),
+            patch.dict("sys.modules", {"Evtx": mock_parent, "Evtx.Evtx": mock_evtx_mod}),
         ):
             events = load_evtx_events(Path("fake.evtx"))
         assert events == []
@@ -204,9 +210,12 @@ class TestStreamEvtxEvents:
         mock_evtx_mod = MagicMock()
         mock_evtx_mod.Evtx.return_value = mock_log
 
+        mock_parent = MagicMock()
+        mock_parent.Evtx = mock_evtx_mod
+
         with (
             patch("threatlens.parsers.evtx_parser._ensure_evtx_available", return_value=True),
-            patch.dict("sys.modules", {"Evtx.Evtx": mock_evtx_mod}),
+            patch.dict("sys.modules", {"Evtx": mock_parent, "Evtx.Evtx": mock_evtx_mod}),
         ):
             events = list(stream_evtx_events(Path("fake.evtx")))
         assert len(events) == 1
@@ -229,9 +238,12 @@ class TestStreamEvtxEvents:
         mock_evtx_mod = MagicMock()
         mock_evtx_mod.Evtx.return_value = mock_log
 
+        mock_parent = MagicMock()
+        mock_parent.Evtx = mock_evtx_mod
+
         with (
             patch("threatlens.parsers.evtx_parser._ensure_evtx_available", return_value=True),
-            patch.dict("sys.modules", {"Evtx.Evtx": mock_evtx_mod}),
+            patch.dict("sys.modules", {"Evtx": mock_parent, "Evtx.Evtx": mock_evtx_mod}),
         ):
             events = list(stream_evtx_events(Path("fake.evtx")))
         assert events == []
