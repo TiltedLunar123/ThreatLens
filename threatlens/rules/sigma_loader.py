@@ -313,9 +313,7 @@ class SigmaRule(DetectionRule):
 
     def _logsource_matches(self, event: LogEvent) -> bool:
         """Pre-filter events by logsource criteria."""
-        if self._category and event.category != self._category:
-            return False
-        return True
+        return not (self._category and event.category != self._category)
 
     def analyze(self, events: list[LogEvent]) -> list[Alert]:
         alerts: list[Alert] = []

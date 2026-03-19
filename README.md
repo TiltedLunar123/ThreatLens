@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
-  <img src="https://img.shields.io/badge/tests-274%20passing%20(94%25%20cov)-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://github.com/TiltedLunar123/ThreatLens/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/MITRE%20ATT%26CK-mapped-red?style=flat-square" alt="MITRE ATT&CK">
   <img src="https://img.shields.io/badge/Sigma-compatible-blueviolet?style=flat-square" alt="Sigma Compatible">
   <img src="https://img.shields.io/badge/code%20style-ruff-000000?style=flat-square" alt="Ruff">
@@ -466,7 +466,7 @@ ThreatLens/
 ├── sample_data/
 │   ├── sample_security_log.json     # 26 events — focused attack simulation
 │   └── mixed_enterprise_log.json    # 52 events — benign noise + embedded attack
-├── tests/                           # 274 tests, 94% coverage
+├── tests/
 │   ├── conftest.py                  # Shared fixtures & event helpers
 │   ├── test_cli.py                  # CLI argument parsing & scan paths
 │   ├── test_detections.py           # Detection module unit tests

@@ -51,7 +51,8 @@ class TestPrintBanner:
         print_banner()
         output = capsys.readouterr().out
         assert "Threat Hunting" in output
-        assert "v1.0.0" in output
+        from threatlens import __version__
+        assert f"v{__version__}" in output
 
 
 class TestPrintSummary:

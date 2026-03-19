@@ -332,12 +332,10 @@ def _alert_allowed(alert: Any, allowlist: list[dict[str, Any]]) -> str | None:
             ips = {ev.get("source_ip", "") for ev in alert.evidence}
             if entry["source_ip"] not in ips:
                 match = False
-        if "severity" in entry:
-            if entry["severity"].lower() != alert.severity.value.lower():
-                match = False
-        if "mitre_technique" in entry:
-            if entry["mitre_technique"].upper() not in alert.mitre_technique.upper():
-                match = False
+        if "severity" in entry and entry["severity"].lower() != alert.severity.value.lower():
+            match = False
+        if "mitre_technique" in entry and entry["mitre_technique"].upper() not in alert.mitre_technique.upper():
+            match = False
         if "event_id" in entry:
             event_ids = {str(ev.get("event_id", "")) for ev in alert.evidence}
             if str(entry["event_id"]) not in event_ids:

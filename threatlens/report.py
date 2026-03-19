@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from threatlens import __version__
 from threatlens.models import Alert, Severity
 from threatlens.utils import bold, colorize
 
@@ -57,7 +58,7 @@ def print_alerts(alerts: list[Alert], verbose: bool = False) -> None:
         key=lambda a: severity_order.get(a.severity, 99),
     )
 
-    for i, alert in enumerate(sorted_alerts, 1):
+    for _i, alert in enumerate(sorted_alerts, 1):
         severity_tag = colorize(f"[{alert.severity.value.upper()}]", alert.severity)
         print(f"  {severity_tag} {bold(alert.rule_name)}")
         print(f"    Time:       {alert.timestamp_str}")
@@ -84,7 +85,7 @@ def export_json(alerts: list[Alert], output_path: Path, total_events: int) -> No
     report = {
         "report_metadata": {
             "tool": "ThreatLens",
-            "version": "1.0.0",
+            "version": __version__,
             "generated_at": datetime.now().isoformat(),
             "total_events_analyzed": total_events,
             "total_alerts": len(alerts),

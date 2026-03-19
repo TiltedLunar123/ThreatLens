@@ -593,9 +593,11 @@ class TestScanErrorPaths:
             def analyze(self, events):
                 raise RuntimeError("boom")
 
-        with patch("threatlens.cli.ALL_DETECTORS", []):
-            with patch("threatlens.cli._build_detectors", return_value=[BrokenDetector()]):
-                result = run_scan(args)
+        with (
+            patch("threatlens.cli.ALL_DETECTORS", []),
+            patch("threatlens.cli._build_detectors", return_value=[BrokenDetector()]),
+        ):
+            result = run_scan(args)
         # Should still complete (with 0 alerts since only detector failed)
         assert result in (0, 2)
 
@@ -634,7 +636,7 @@ class TestScanErrorPaths:
             mock_response = MagicMock()
             mock_response.read.return_value = b'{"errors": false, "items": []}'
             mock_urlopen.return_value = mock_response
-            result = run_scan(args)
+            run_scan(args)
         output = capsys.readouterr().out
         assert "Elasticsearch:" in output
 
@@ -650,6 +652,7 @@ class TestRunFollow:
     def test_follow_with_keyboard_interrupt(self, capsys):
         """Follow should handle KeyboardInterrupt gracefully."""
         import tempfile
+
         from threatlens.cli import run_follow
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
@@ -699,9 +702,9 @@ class TestRunFollow:
 
 class TestFlushFollowBuffer:
     def test_flush_prints_alerts(self, capsys):
+        from tests.conftest import make_failed_logon
         from threatlens.cli import _flush_follow_buffer
         from threatlens.models import Severity
-        from tests.conftest import make_failed_logon
 
         events = [make_failed_logon(datetime(2025, 1, 15, 8, 30, i)) for i in range(6)]
         from threatlens.detections.brute_force import BruteForceDetector
@@ -713,9 +716,9 @@ class TestFlushFollowBuffer:
         assert "Brute-Force" in output or "MEDIUM" in output
 
     def test_flush_deduplicates(self, capsys):
+        from tests.conftest import make_failed_logon
         from threatlens.cli import _flush_follow_buffer
         from threatlens.models import Severity
-        from tests.conftest import make_failed_logon
 
         events = [make_failed_logon(datetime(2025, 1, 15, 8, 30, i)) for i in range(6)]
         from threatlens.detections.brute_force import BruteForceDetector
@@ -731,9 +734,9 @@ class TestFlushFollowBuffer:
         assert len(second_output) < len(first_output) or second_output == ""
 
     def test_flush_respects_min_severity(self, capsys):
+        from tests.conftest import make_failed_logon
         from threatlens.cli import _flush_follow_buffer
         from threatlens.models import Severity
-        from tests.conftest import make_failed_logon
 
         events = [make_failed_logon(datetime(2025, 1, 15, 8, 30, i)) for i in range(6)]
         from threatlens.detections.brute_force import BruteForceDetector
@@ -747,9 +750,9 @@ class TestFlushFollowBuffer:
         assert "Brute-Force" not in output
 
     def test_flush_handles_broken_detector(self, capsys):
+        from tests.conftest import make_failed_logon
         from threatlens.cli import _flush_follow_buffer
         from threatlens.models import Severity
-        from tests.conftest import make_failed_logon
 
         events = [make_failed_logon(datetime(2025, 1, 15, 8, 30, 0))]
         class BrokenDetector:
