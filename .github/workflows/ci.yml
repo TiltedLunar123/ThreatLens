@@ -27,5 +27,21 @@ jobs:
       - name: Lint with ruff
         run: ruff check threatlens/ tests/
 
-      - name: Run tests
-        run: pytest tests/ --cov=threatlens --cov-report=term-missing -v
+      - name: Run tests with coverage
+        run: pytest tests/ --cov=threatlens --cov-report=term-missing --cov-report=xml -v
+
+      - name: Test CLI entry point
+        run: |
+          threatlens --help
+          threatlens scan sample_data/sample_security_log.json --quiet --no-color
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t threatlens:test .
+
+      - name: Test Docker image
+        run: docker run --rm threatlens:test --help

@@ -601,8 +601,9 @@ class TestScanErrorPaths:
         # Should still complete (with 0 alerts since only detector failed)
         assert result in (0, 2)
 
-    def test_scan_with_allowlist_suppression_stats(self, capsys):
-        """Allowlist with reason should print suppression stats."""
+    def test_scan_with_allowlist_suppression_stats(self, capsys, caplog):
+        """Allowlist with reason should log suppression stats."""
+        import logging
         import tempfile
         sample = Path(__file__).parent.parent / "sample_data" / "sample_security_log.json"
         if not sample.exists():
@@ -616,9 +617,9 @@ class TestScanErrorPaths:
             f.flush()
             parser = build_parser()
             args = parser.parse_args(["scan", str(sample), "--allowlist", f.name])
-            run_scan(args)
-        stderr = capsys.readouterr().err
-        assert "suppressed" in stderr.lower() or "Expected noise" in stderr
+            with caplog.at_level(logging.WARNING, logger="threatlens"):
+                run_scan(args)
+        assert "suppressed" in caplog.text.lower() or "Expected noise" in caplog.text
 
     def test_scan_with_elasticsearch(self, capsys):
         """ES send path should be exercised (mocked)."""

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import logging
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -231,6 +231,6 @@ def load_yaml_rules(rules_path: Path) -> list[YamlRule]:
                 if isinstance(rule_def, dict) and "conditions" in rule_def:
                     rules.append(YamlRule(rule_def))
         except Exception as e:
-            print(f"  Warning: Failed to load rules from {yaml_file}: {e}", file=sys.stderr)
+            logging.getLogger("threatlens").warning("Failed to load rules from %s: %s", yaml_file, e)
 
     return rules

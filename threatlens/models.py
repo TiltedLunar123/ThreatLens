@@ -85,5 +85,6 @@ class Alert:
             "mitre_technique": self.mitre_technique,
             "recommendation": self.recommendation,
             "evidence_count": len(self.evidence),
-            "evidence": self.evidence[:5],  # Cap for readability
+            "evidence": self.evidence[:10],
+            "evidence_truncated": len(self.evidence) > 10,
         }

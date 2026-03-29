@@ -7,6 +7,7 @@ Requires the optional ``python-evtx`` package::
 
 from __future__ import annotations
 
+import logging
 import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
@@ -132,10 +133,9 @@ def _ensure_evtx_available() -> bool:
         import Evtx  # noqa: F401
         return True
     except ImportError:
-        print(
-            "Error: python-evtx is required for .evtx file parsing.\n"
-            "  Install it with: pip install python-evtx",
-            file=sys.stderr,
+        logging.getLogger("threatlens").error(
+            "python-evtx is required for .evtx file parsing. "
+            "Install it with: pip install python-evtx"
         )
         return False
 

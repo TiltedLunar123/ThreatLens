@@ -34,7 +34,10 @@ def load_events(path: Path, input_format: str | None = None) -> list[LogEvent]:
     if fmt == "evtx":
         from threatlens.parsers.evtx_parser import load_evtx_events
         return load_evtx_events(path)
-    elif fmt in ("syslog", "cef"):
+    elif fmt == "cef":
+        from threatlens.parsers.cef_parser import load_cef_events
+        return load_cef_events(path)
+    elif fmt == "syslog":
         from threatlens.parsers.syslog_parser import load_syslog_events
         return load_syslog_events(path, fmt)
     else:
@@ -48,7 +51,10 @@ def stream_events(path: Path, input_format: str | None = None) -> Iterator[LogEv
     if fmt == "evtx":
         from threatlens.parsers.evtx_parser import stream_evtx_events
         yield from stream_evtx_events(path)
-    elif fmt in ("syslog", "cef"):
+    elif fmt == "cef":
+        from threatlens.parsers.cef_parser import load_cef_events
+        yield from load_cef_events(path)
+    elif fmt == "syslog":
         from threatlens.parsers.syslog_parser import stream_syslog_events
         yield from stream_syslog_events(path, fmt)
     else:

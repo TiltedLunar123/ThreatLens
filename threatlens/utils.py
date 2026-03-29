@@ -77,6 +77,44 @@ def is_private_ip(ip: str) -> bool:
         return False
 
 
+def find_dense_windows(
+    events: Sequence[LogEvent],
+    window_seconds: int,
+    min_count: int,
+) -> list[list[LogEvent]]:
+    """Find all maximal windows containing at least min_count events.
+
+    Uses a sliding window approach and deduplicates overlapping windows.
+    Returns a list of event groups, each representing a dense burst.
+    """
+    if not events or min_count < 1:
+        return []
+
+    sorted_events = sorted(events, key=lambda e: e.timestamp)
+    results: list[list[LogEvent]] = []
+    used: set[int] = set()
+
+    for i in range(len(sorted_events)):
+        if i in used:
+            continue
+
+        window: list[LogEvent] = []
+        window_indices: list[int] = []
+        for j in range(i, len(sorted_events)):
+            delta = (sorted_events[j].timestamp - sorted_events[i].timestamp).total_seconds()
+            if delta <= window_seconds:
+                window.append(sorted_events[j])
+                window_indices.append(j)
+            else:
+                break
+
+        if len(window) >= min_count:
+            results.append(window)
+            used.update(window_indices)
+
+    return results
+
+
 def format_table(headers: list[str], rows: list[list[str]], max_width: int = 40) -> str:
     """Format data as a simple ASCII table."""
     def truncate(val: str) -> str:

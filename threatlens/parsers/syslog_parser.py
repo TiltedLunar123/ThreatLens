@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import logging
 import re
-import sys
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -343,10 +343,9 @@ def load_syslog_events(log_path: Path, fmt: str = "syslog") -> list[LogEvent]:
                 if event:
                     events.append(event)
             except Exception:
-                print(
-                    f"  Warning: Skipping malformed line {line_num}: "
-                    f"{line[:80].strip()}{'...' if len(line) > 80 else ''}",
-                    file=sys.stderr,
+                logging.getLogger("threatlens").warning(
+                    "Skipping malformed line %d: %s%s",
+                    line_num, line[:80].strip(), "..." if len(line) > 80 else "",
                 )
 
     events.sort(key=lambda e: e.timestamp)

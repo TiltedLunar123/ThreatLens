@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from datetime import datetime
 from typing import Any
@@ -80,13 +81,12 @@ def send_to_elasticsearch(
         result = json.loads(response.read().decode("utf-8"))
     except HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
-        print(
-            f"  Elasticsearch error (HTTP {e.code}): {error_body[:200]}",
-            file=sys.stderr,
+        logging.getLogger("threatlens").error(
+            "Elasticsearch error (HTTP %s): %s", e.code, error_body[:200]
         )
         return 0, len(alerts)
     except URLError as e:
-        print(f"  Elasticsearch connection error: {e.reason}", file=sys.stderr)
+        logging.getLogger("threatlens").error("Elasticsearch connection error: %s", e.reason)
         return 0, len(alerts)
 
     if result.get("errors"):
@@ -143,5 +143,5 @@ def ensure_index_template(
         urlopen(req, timeout=10)
         return True
     except Exception as e:
-        print(f"  Warning: Could not create index template: {e}", file=sys.stderr)
+        logging.getLogger("threatlens").warning("Could not create index template: %s", e)
         return False

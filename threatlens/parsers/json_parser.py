@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import sys
+import logging
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
@@ -116,10 +116,9 @@ def load_json_events(log_path: Path) -> list[LogEvent]:
                 try:
                     entries.append(json.loads(line))
                 except json.JSONDecodeError:
-                    print(
-                        f"  Warning: Skipping malformed JSON on line {line_num}: "
-                        f"{line[:80]}{'...' if len(line) > 80 else ''}",
-                        file=sys.stderr,
+                    logging.getLogger("threatlens").warning(
+                        "Skipping malformed JSON on line %d: %s%s",
+                        line_num, line[:80], "..." if len(line) > 80 else "",
                     )
 
     events = [parse_event(e) for e in entries]

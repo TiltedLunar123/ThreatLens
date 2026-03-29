@@ -42,7 +42,9 @@ It runs entirely offline, requires no infrastructure, and produces structured ou
 
 ---
 
-## Quick Start
+## Installation
+
+### From source
 
 ```bash
 git clone https://github.com/TiltedLunar123/ThreatLens.git
@@ -54,25 +56,75 @@ source .venv/bin/activate        # Linux / macOS
 
 pip install -e ".[dev]"          # core + test dependencies
 pip install -e ".[evtx]"         # optional: native EVTX parsing
+```
 
-threatlens scan sample_data/sample_security_log.json
+### From PyPI
+
+```bash
+pip install threatlens
+```
+
+### Docker
+
+```bash
+docker build -t threatlens .
+docker run --rm -v $(pwd)/logs:/data threatlens scan /data/security.json
 ```
 
 > **Requirements:** Python 3.10+. The only runtime dependency is PyYAML. EVTX support (`python-evtx`) is optional.
 
 ---
 
-## Features at a Glance
+## Quick Start
 
-### Detections
+```bash
+threatlens scan sample_data/sample_security_log.json
+```
 
-| Module | What It Catches | MITRE |
-|--------|----------------|-------|
+---
+
+## Detection Coverage
+
+### Built-in Detectors
+
+| Module | What It Catches | MITRE ATT&CK |
+|--------|----------------|---------------|
 | Brute-Force / Password Spray | Bursts of failed logons from one source; distinguishes targeted brute-force from credential spray | T1110 |
 | Lateral Movement | Single account authenticating to multiple hosts rapidly (network logons, RDP) | T1021 |
 | Privilege Escalation | Sensitive privilege assignments (SeDebugPrivilege, SeTcbPrivilege) to non-system accounts | T1134 |
 | Suspicious Process Execution | LOLBins, encoded PowerShell, certutil download cradles, SAM dumping, service creation | T1059 |
-| Attack Chain Correlation | Multi-stage kill chain linking credential access &rarr; priv-esc &rarr; lateral movement &rarr; execution | Multi-stage |
+| Defense Evasion | Log clearing (Event ID 1102/104), Windows Defender disabled (5001), audit policy changes (4719), firewall modifications | T1070, T1562 |
+| Persistence | New services (7045), scheduled tasks (4698), registry Run key modifications, startup folder changes | T1543, T1053, T1547 |
+| Discovery / Reconnaissance | Rapid bursts of whoami, ipconfig, systeminfo, net, nltest, dsquery by the same user | T1082 |
+| Data Exfiltration | Suspicious archive creation (rar/7z/zip targeting sensitive paths), data staging patterns | T1560, T1074 |
+| Kerberos Attacks | Kerberoasting (TGS with RC4 for non-machine accounts), AS-REP Roasting (TGT with RC4) | T1558 |
+| Credential Access | LSASS memory access (Sysmon Event ID 10), SAM hive access (4663), DCSync (4662 with replication GUIDs) | T1003 |
+| Initial Access | External RDP logons (Event ID 4624 LogonType 10 from non-private IPs), after-hours logons | T1078 |
+| Attack Chain Correlation | Multi-stage kill chain linking credential access to privilege escalation to lateral movement to execution | Multi-stage |
+
+### MITRE ATT&CK Coverage Matrix
+
+| Tactic | Techniques |
+|--------|-----------|
+| Initial Access | T1078 (Valid Accounts) |
+| Execution | T1059 (Command and Scripting Interpreter) |
+| Persistence | T1053 (Scheduled Task), T1543 (Windows Service), T1547 (Boot/Logon Autostart) |
+| Privilege Escalation | T1134 (Access Token Manipulation) |
+| Defense Evasion | T1070 (Indicator Removal), T1562 (Impair Defenses) |
+| Credential Access | T1003 (OS Credential Dumping), T1110 (Brute Force), T1558 (Kerberos Tickets) |
+| Discovery | T1082 (System Information Discovery), T1087 (Account Discovery) |
+| Lateral Movement | T1021 (Remote Services) |
+| Exfiltration | T1560 (Archive Collected Data), T1074 (Data Staged) |
+| Command and Control | T1105 (Ingress Tool Transfer) |
+
+### Rule Engines
+
+| Engine | Description |
+|--------|------------|
+| Built-in detections | 12 modules tunable via `rules/default_rules.yaml` |
+| Custom YAML rules | Field matching with 12 operators, grouping, thresholds, and time windows |
+| Sigma compatibility | Load community [Sigma rules](https://github.com/SigmaHQ/sigma) directly &mdash; selections, filters, conditions, field modifiers |
+| Plugin system | Load custom Python detectors from a directory with `--plugin-dir` |
 
 ### Input Formats
 
@@ -82,14 +134,6 @@ threatlens scan sample_data/sample_security_log.json
 | EVTX | `.evtx` | Native Windows Event Log &mdash; no manual export step needed |
 | Syslog | `.log` `.syslog` | RFC 3164 and RFC 5424 with auto-detection |
 | CEF | `.cef` | Common Event Format (ArcSight, Splunk, etc.) |
-
-### Rule Engines
-
-| Engine | Description |
-|--------|------------|
-| Built-in detections | 5 modules tunable via `rules/default_rules.yaml` |
-| Custom YAML rules | Field matching with 12 operators, grouping, thresholds, and time windows |
-| Sigma compatibility | Load community [Sigma rules](https://github.com/SigmaHQ/sigma) directly &mdash; selections, filters, conditions, field modifiers |
 
 ### Output Formats
 
@@ -175,7 +219,7 @@ threatlens follow /var/log/auth.log --input-format syslog \
 ### CI/CD Integration
 
 ```bash
-# Exit code 2 if any HIGH+ alert fires — use in pipelines
+# Exit code 2 if any HIGH+ alert fires -- use in pipelines
 threatlens scan logs/ --fail-on high
 
 # Summary only, no color (clean for CI output)
@@ -194,7 +238,7 @@ threatlens scan logs/ --allowlist ops/allowlist.yaml
 allowlist:
   - rule_name: "Brute-Force"
     username: "svc_monitor"
-    reason: "Service account — expected failed auths"
+    reason: "Service account -- expected failed auths"
   - rule_name: "Privilege"
     computer: "DC-01"
     username: "SYSTEM"
@@ -202,10 +246,8 @@ allowlist:
     severity: "low"
     reason: "Vulnerability scanner"
   - mitre_technique: "T1033"
-    reason: "Noisy discovery rule — tuned out"
+    reason: "Noisy discovery rule -- tuned out"
 ```
-
-Suppressed alerts are tracked per-reason and printed as a summary at the end of the scan.
 
 ### Other Commands
 
@@ -216,54 +258,102 @@ python -m threatlens.cli scan ...   # Run without installing
 
 ---
 
-## Example Output
+## Configuration File
+
+ThreatLens supports a YAML configuration file at `~/.threatlens.yaml` or `./.threatlens.yaml` (current directory takes priority). CLI arguments always override config file values.
+
+```yaml
+# ~/.threatlens.yaml
+min_severity: medium
+no_color: false
+recursive: true
+custom_rules: /path/to/my_rules/
+sigma_rules: /path/to/sigma/rules/windows/
+elastic_url: http://localhost:9200
+elastic_index: threatlens-alerts
+allowlist: /path/to/allowlist.yaml
+plugin_dir: /path/to/plugins/
+```
+
+---
+
+## Plugin System
+
+Create custom Python detectors and load them at scan time with `--plugin-dir`:
+
+```bash
+threatlens scan logs/ --plugin-dir my_plugins/
+```
+
+Each `.py` file in the directory should define a class that subclasses `DetectionRule`:
+
+```python
+from threatlens.detections.base import DetectionRule
+from threatlens.models import Alert, LogEvent, Severity
+
+class MyCustomDetector(DetectionRule):
+    name = "My Custom Detection"
+    description = "Detects something specific to my environment"
+    mitre_tactic = "Execution"
+    mitre_technique = "T1059"
+
+    def analyze(self, events: list[LogEvent]) -> list[Alert]:
+        alerts = []
+        for event in events:
+            if event.event_id == 9999:
+                alerts.append(Alert(
+                    rule_name=self.name,
+                    severity=Severity.HIGH,
+                    description="Custom event detected",
+                    timestamp=event.timestamp,
+                    evidence=[{"event_id": event.event_id}],
+                ))
+        return alerts
+```
+
+---
+
+## Docker
+
+### Build
+
+```bash
+docker build -t threatlens .
+```
+
+### Run
+
+```bash
+# Show help
+docker run --rm threatlens
+
+# Scan local logs
+docker run --rm -v $(pwd)/logs:/data threatlens scan /data/
+
+# Scan with options
+docker run --rm -v $(pwd)/logs:/data threatlens scan /data/ \
+  --min-severity high --no-color -o /data/report.json
+```
+
+---
+
+## Performance
+
+Use the `--profile` flag to get timing breakdowns for each scan phase:
+
+```bash
+threatlens scan logs/ --profile
+```
 
 ```
-  _____ _                    _   _
- |_   _| |__  _ __ ___  __ _| |_| |    ___ _ __  ___
-   | | | '_ \| '__/ _ \/ _` | __| |   / _ \ '_ \/ __|
-   | | | | | | | |  __/ (_| | |_| |__|  __/ | | \__ \
-   |_| |_| |_|_|  \___|\__,_|\__|_____\___|_| |_|___/
-
-  Log Analysis & Threat Hunting CLI v1.1.0
-
-  Scanning 1 file(s)...
-  Parsed     26 events from sample_security_log.json
-
-============================================================
-  SCAN SUMMARY
-============================================================
-  Events analyzed:   26
-  Alerts generated:  11
-  Scan duration:     0.00s
-
-  CRITICAL     1
-  HIGH         5
-  MEDIUM       4
-  LOW          1
-============================================================
-
-  [CRITICAL] Suspicious Process: SAM registry hive access
-    Time:       2025-01-15 09:15:00
-    Detail:     Process 'reg.exe' executed with suspicious command line on DC-01
-    MITRE:      Execution / T1059 - Command and Scripting Interpreter
-    Action:     Review the full command line and parent process...
-
-  [HIGH] Brute-Force Detected
-    Time:       2025-01-15 08:30:01
-    Detail:     7 failed logon attempts from 10.0.1.50 targeting 1 account(s) within 300s
-    MITRE:      Credential Access / T1110 - Brute Force
-    Action:     Investigate source 10.0.1.50. Consider blocking the IP...
-
-  [HIGH] Lateral Movement Detected
-    Time:       2025-01-15 09:00:00
-    Detail:     User 'svc_deploy' authenticated to 4 distinct hosts within 600s
-    MITRE:      Lateral Movement / T1021 - Remote Services
-
-  [HIGH] Suspicious Privilege Assignment
-    Time:       2025-01-15 09:05:00
-    Detail:     User 'jdoe' was assigned sensitive privileges: SeDebugPrivilege, SeTcbPrivilege
-    MITRE:      Privilege Escalation / T1134 - Access Token Manipulation
+  Timing:
+    Parsing:         0.31s
+    Detection:       0.12s
+      Brute Force:          0.02s  (3 alerts)
+      Suspicious Process:   0.05s  (5 alerts)
+      Sigma Rules:          0.03s  (4 alerts)
+    Reporting:       0.01s
+    Total:           0.44s
 ```
 
 ---
@@ -317,12 +407,10 @@ threatlens scan logs/ --sigma-rules sigma/rules/windows/
 
 - Selection blocks with field matching and wildcard (`*`) support
 - Field modifiers: `|contains`, `|startswith`, `|endswith`, `|re`, `|all`
-- Conditions: `selection`, `selection and not filter`, `1 of selection*`, `all of them`, compound `AND`/`OR`/`NOT`
+- Conditions: `selection`, `selection and not filter`, `1 of selection*`, `all of them`, compound `AND`/`OR`/`NOT` with correct operator precedence
 - Logsource pre-filtering by category
 - MITRE ATT&CK tag extraction from `tags` field
 - Severity mapping from `level` field
-
-The test suite validates against 7 Sigma rules covering OR conditions, AND NOT filters, `|contains|all`, `|endswith`, `|startswith`, and multi-selection patterns.
 
 ---
 
@@ -339,8 +427,6 @@ Detection results from running ThreatLens against the included sample datasets:
 | MEDIUM | 2 | Brute-force (7 failed logons), password spray (5 targets) |
 | LOW | 1 | Privilege enumeration (whoami /priv) |
 
-**12 alerts from 26 events.** All embedded attack activity detected with correct MITRE ATT&CK mapping. Attack chain correlator linked credential access to subsequent execution across a ~50-minute window.
-
 ### `mixed_enterprise_log.json` &mdash; 52 events (benign noise + embedded attack)
 
 | Severity | Count | Detections |
@@ -349,8 +435,6 @@ Detection results from running ThreatLens against the included sample datasets:
 | HIGH | 9 | Brute-force, lateral movement, privilege escalation, encoded PowerShell, certutil download, scheduled task, service creation, 2 attack chains |
 | MEDIUM | 0 | &mdash; |
 | LOW | 0 | &mdash; |
-
-**10 alerts from 52 events.** 30 benign events (routine logons, scheduled tasks, application logs) produced **zero false positives**. Two attack chains detected: `admin` (Credential Access &rarr; Lateral Movement) and `asmith` (Lateral Movement &rarr; Execution).
 
 ### Key Takeaways
 
@@ -365,67 +449,18 @@ Detection results from running ThreatLens against the included sample datasets:
 
 ```
   Log Files                     Detection Engines                  Output
- ┌──────────┐              ┌─────────────────────┐          ┌──────────────┐
- │ JSON     │─┐            │ Built-in Detections  │          │ Terminal     │
- │ EVTX     │ │  ┌──────┐  │ Custom YAML Rules    │  ┌────┐  │ JSON / CSV   │
- │ Syslog   │─┼─>│Parse │─>│ Sigma Compatibility  │─>│Rank│─>│ HTML Report  │
- │ CEF      │ │  └──────┘  │ Attack Chain Correlat.│  └────┘  │ Timeline     │
- │ (dir)    │─┘            └─────────────────────┘          │ Elasticsearch│
- └──────────┘                                               └──────────────┘
+ +----------+              +---------------------+          +--------------+
+ | JSON     |-+            | Built-in Detections  |          | Terminal     |
+ | EVTX     | |  +------+  | Custom YAML Rules    |  +----+  | JSON / CSV   |
+ | Syslog   |-+->|Parse |->| Sigma Compatibility  |->|Rank|->| HTML Report  |
+ | CEF      | |  +------+  | Plugin Detectors     |  +----+  | Timeline     |
+ | (dir)    |-+            | Attack Chain Correlat.|          | Elasticsearch|
+ +----------+              +---------------------+          +--------------+
 ```
 
 1. **Parse** &mdash; Logs are loaded from any supported format and normalized into a common `LogEvent` model. Format is auto-detected from the file extension or forced with `--input-format`.
-2. **Detect** &mdash; Built-in detections, custom YAML rules, and Sigma rules analyze the event stream using time-window grouping, field correlation, and regex matching.
+2. **Detect** &mdash; Built-in detections, custom YAML rules, Sigma rules, and plugin detectors analyze the event stream using time-window grouping, field correlation, and regex matching.
 3. **Report** &mdash; Alerts are ranked by severity, mapped to MITRE ATT&CK, and output with actionable recommendations.
-
----
-
-## Supported Log Formats
-
-### JSON / NDJSON
-
-Standard Windows Event Log JSON exports or any JSON with `EventID`, `TimeCreated`, and `EventData` fields:
-
-```json
-{
-  "TimeCreated": "2025-01-15T08:30:01Z",
-  "EventID": 4625,
-  "Computer": "WS-PC01",
-  "EventData": {
-    "TargetUserName": "admin",
-    "IpAddress": "10.0.1.50",
-    "LogonType": 3
-  }
-}
-```
-
-**Export logs with PowerShell:**
-
-```powershell
-Get-WinEvent -LogName Security -MaxEvents 1000 |
-  Select-Object TimeCreated, Id, MachineName, Message |
-  ConvertTo-Json | Out-File security_events.json
-```
-
-### EVTX (Native)
-
-```bash
-threatlens scan C:\Windows\System32\winevt\Logs\Security.evtx
-```
-
-> Requires the optional `python-evtx` package: `pip install -e ".[evtx]"`
-
-### Syslog (RFC 3164 / 5424)
-
-```
-<34>Jan 15 08:30:01 server01 sshd[1234]: Failed password for admin from 10.0.1.50 port 22 ssh2
-```
-
-### CEF (Common Event Format)
-
-```
-CEF:0|Security|IDS|1.0|100|Intrusion Detected|7|src=10.0.1.50 duser=admin dhost=server01
-```
 
 ---
 
@@ -433,57 +468,76 @@ CEF:0|Security|IDS|1.0|100|Intrusion Detected|7|src=10.0.1.50 duser=admin dhost=
 
 ```
 ThreatLens/
-├── threatlens/
-│   ├── __init__.py                  # Package metadata & version
-│   ├── cli.py                       # CLI argument parsing & command routing
-│   ├── models.py                    # LogEvent, Alert, Severity data models
-│   ├── report.py                    # Terminal output, JSON/CSV export
-│   ├── utils.py                     # Helpers (colors, time grouping, tables)
-│   ├── parsers/
-│   │   ├── __init__.py              # Unified parser interface (auto-detect)
-│   │   ├── json_parser.py           # JSON / NDJSON log parsing
-│   │   ├── evtx_parser.py           # Native Windows EVTX parsing (optional)
-│   │   └── syslog_parser.py         # Syslog (RFC 3164/5424) & CEF parsing
-│   ├── rules/
-│   │   ├── __init__.py              # Rule engine exports
-│   │   ├── yaml_rules.py            # Custom YAML rule engine (12 operators)
-│   │   └── sigma_loader.py          # Sigma rule compatibility layer
-│   ├── outputs/
-│   │   ├── __init__.py              # Output module exports
-│   │   ├── html_report.py           # HTML report with SVG severity charts
-│   │   ├── timeline.py              # Interactive attack timeline visualization
-│   │   └── elasticsearch.py         # Elasticsearch bulk API connector (stdlib)
-│   └── detections/
-│       ├── __init__.py              # Detection registry
-│       ├── base.py                  # Abstract DetectionRule base class
-│       ├── attack_chain.py          # Multi-stage kill chain correlation
-│       ├── brute_force.py           # Failed logon burst & spray detection
-│       ├── lateral_movement.py      # Multi-host auth pattern detection
-│       ├── privilege_escalation.py  # Sensitive privilege monitoring
-│       └── suspicious_process.py    # LOLBin & command-line analysis
-├── rules/
-│   └── default_rules.yaml           # Tunable detection thresholds
-├── sample_data/
-│   ├── sample_security_log.json     # 26 events — focused attack simulation
-│   └── mixed_enterprise_log.json    # 52 events — benign noise + embedded attack
-├── tests/
-│   ├── conftest.py                  # Shared fixtures & event helpers
-│   ├── test_cli.py                  # CLI argument parsing & scan paths
-│   ├── test_detections.py           # Detection module unit tests
-│   ├── test_evtx_parser.py          # EVTX parser edge cases
-│   ├── test_outputs.py              # HTML, timeline, Elasticsearch tests
-│   ├── test_parsers.py              # Parser & format detection tests
-│   ├── test_report.py               # Report generation & export tests
-│   ├── test_rules.py                # YAML rules, Sigma matching & corpus validation
-│   ├── test_utils.py                # Utility function tests
-│   └── sigma_samples/               # 7 Sigma rules for integration tests
-├── docs/
-│   └── images/                      # README screenshots
-├── pyproject.toml                   # Build config, dependencies, extras
-├── requirements.txt                 # Runtime dependency (pyyaml)
-├── .gitignore
-├── LICENSE
-└── README.md
++-- threatlens/
+|   +-- __init__.py                  # Package metadata & version
+|   +-- cli.py                       # CLI argument parsing & dispatch
+|   +-- scanner.py                   # Scan command logic
+|   +-- follower.py                  # Follow (tail) command logic
+|   +-- allowlist.py                 # Allowlist loading & matching
+|   +-- config.py                    # Config file, rule loading, plugins
+|   +-- models.py                    # LogEvent, Alert, Severity data models
+|   +-- report.py                    # Terminal output, JSON/CSV export
+|   +-- utils.py                     # Helpers (colors, time grouping, tables)
+|   +-- parsers/
+|   |   +-- __init__.py              # Unified parser interface (auto-detect)
+|   |   +-- json_parser.py           # JSON / NDJSON log parsing
+|   |   +-- evtx_parser.py           # Native Windows EVTX parsing (optional)
+|   |   +-- syslog_parser.py         # Syslog (RFC 3164/5424) parsing
+|   |   +-- cef_parser.py            # CEF (Common Event Format) parsing
+|   +-- rules/
+|   |   +-- __init__.py              # Rule engine exports
+|   |   +-- yaml_rules.py            # Custom YAML rule engine (12 operators)
+|   |   +-- sigma_loader.py          # Sigma rule compatibility layer
+|   +-- outputs/
+|   |   +-- __init__.py              # Output module exports
+|   |   +-- html_report.py           # HTML report with SVG severity charts
+|   |   +-- timeline.py              # Interactive attack timeline visualization
+|   |   +-- elasticsearch.py         # Elasticsearch bulk API connector (stdlib)
+|   +-- detections/
+|       +-- __init__.py              # Detection registry
+|       +-- base.py                  # Abstract DetectionRule base class
+|       +-- attack_chain.py          # Multi-stage kill chain correlation
+|       +-- brute_force.py           # Failed logon burst & spray detection
+|       +-- credential_access.py     # LSASS, SAM, DCSync detection
+|       +-- defense_evasion.py       # Log clearing, Defender, audit policy
+|       +-- discovery.py             # Reconnaissance command bursts
+|       +-- exfiltration.py          # Archive creation & data staging
+|       +-- initial_access.py        # External RDP, after-hours logons
+|       +-- kerberos_attacks.py      # Kerberoasting & AS-REP Roasting
+|       +-- lateral_movement.py      # Multi-host auth pattern detection
+|       +-- persistence.py           # Services, scheduled tasks, run keys
+|       +-- privilege_escalation.py  # Sensitive privilege monitoring
+|       +-- suspicious_process.py    # LOLBin & command-line analysis
++-- rules/
+|   +-- default_rules.yaml           # Tunable detection thresholds
++-- sample_data/
+|   +-- sample_security_log.json     # 26 events -- focused attack simulation
+|   +-- mixed_enterprise_log.json    # 52 events -- benign noise + embedded attack
+|   +-- large_synthetic.json         # 1000 events -- generated test data
++-- scripts/
+|   +-- generate_sample_data.py      # Synthetic log data generator
++-- tests/
+|   +-- conftest.py                  # Shared fixtures & event helpers
+|   +-- test_cli.py                  # CLI argument parsing & scan paths
+|   +-- test_detections.py           # Detection module unit tests
+|   +-- test_evtx_parser.py          # EVTX parser edge cases
+|   +-- test_follow.py              # Follow mode tests
+|   +-- test_integration.py          # End-to-end integration tests
+|   +-- test_outputs.py              # HTML, timeline, Elasticsearch tests
+|   +-- test_parsers.py              # Parser & format detection tests
+|   +-- test_report.py               # Report generation & export tests
+|   +-- test_rules.py                # YAML rules, Sigma matching & corpus
+|   +-- test_utils.py                # Utility function tests
+|   +-- sigma_samples/               # Sigma rules for integration tests
++-- docs/
+|   +-- images/                      # README screenshots
++-- Dockerfile                       # Container build
++-- .dockerignore                    # Docker build exclusions
++-- pyproject.toml                   # Build config, dependencies, extras
++-- requirements.txt                 # Runtime dependency (pyyaml)
++-- .gitignore
++-- LICENSE
++-- README.md
 ```
 
 ---
@@ -512,19 +566,6 @@ Run with coverage:
 ```bash
 pytest tests/ --cov=threatlens --cov-report=term-missing
 ```
-
-The test suite covers all modules across 8 test files:
-
-| File | Coverage |
-|------|----------|
-| `test_parsers.py` | JSON, syslog, CEF, EVTX, format detection, routing |
-| `test_detections.py` | Brute-force, lateral movement, priv-esc, suspicious process, attack chain |
-| `test_rules.py` | Custom YAML rules, Sigma matching, 7-rule corpus validation |
-| `test_outputs.py` | HTML report, timeline, Elasticsearch bulk API |
-| `test_cli.py` | Argument parsing, file collection, scan/follow paths |
-| `test_report.py` | Terminal output, JSON/CSV export |
-| `test_evtx_parser.py` | XML-to-dict, record parsing, mocked load/stream |
-| `test_utils.py` | Color helpers, time grouping, table formatting |
 
 ---
 

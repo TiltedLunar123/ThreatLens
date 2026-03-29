@@ -9,8 +9,8 @@ Reference: https://github.com/SigmaHQ/sigma-specification
 
 from __future__ import annotations
 
+import logging
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -187,67 +187,134 @@ def _selection_matches(event: LogEvent, selection: dict[str, Any]) -> bool:
     return True
 
 
+def _tokenize(condition_str: str) -> list[str]:
+    """Tokenize a Sigma condition string."""
+    tokens: list[str] = []
+    i = 0
+    s = condition_str.strip()
+    while i < len(s):
+        # Skip whitespace
+        if s[i].isspace():
+            i += 1
+            continue
+        # Parentheses
+        if s[i] in ("(", ")"):
+            tokens.append(s[i])
+            i += 1
+            continue
+        # Try to match keywords and compound expressions
+        rest = s[i:]
+        rest_lower = rest.lower()
+        # Match "1 of <name>*" or "all of <name>*" or "1 of them" / "all of them"
+        of_match = re.match(r"(1|all)\s+of\s+(\w+\*|them)", rest_lower)
+        if of_match:
+            length = of_match.end()
+            tokens.append(rest[:length])
+            i += length
+            continue
+        # Match keywords (and, or, not)
+        for kw in ("and", "or", "not"):
+            if rest_lower.startswith(kw) and (
+                len(rest) == len(kw) or not rest[len(kw)].isalnum()
+            ):
+                tokens.append(kw)
+                i += len(kw)
+                break
+        else:
+            # Identifier (selection name)
+            m = re.match(r"\w+", rest)
+            if m:
+                tokens.append(m.group())
+                i += m.end()
+            else:
+                i += 1  # skip unknown character
+    return tokens
+
+
 def _parse_condition(condition_str: str, selections: dict[str, dict], event: LogEvent) -> bool:
     """Evaluate a Sigma condition expression against an event.
 
-    Supports: selection references, AND, OR, NOT, parentheses, 1/all of selection*
+    Uses a recursive-descent parser with correct operator precedence:
+      OR (lowest) < AND < NOT (highest)
     """
-    condition_str = condition_str.strip()
+    tokens = _tokenize(condition_str)
+    if not tokens:
+        return False
+    result, _ = _eval_or(tokens, 0, selections, event)
+    return result
 
-    # Handle "1 of selection*" or "all of selection*" patterns
-    of_match = re.match(r"(1|all)\s+of\s+(\w+)\*", condition_str)
+
+def _eval_or(tokens: list[str], pos: int, selections: dict, event: LogEvent) -> tuple[bool, int]:
+    """OR has lowest precedence."""
+    left, pos = _eval_and(tokens, pos, selections, event)
+    while pos < len(tokens) and tokens[pos] == "or":
+        pos += 1  # consume 'or'
+        right, pos = _eval_and(tokens, pos, selections, event)
+        left = left or right
+    return left, pos
+
+
+def _eval_and(tokens: list[str], pos: int, selections: dict, event: LogEvent) -> tuple[bool, int]:
+    """AND has higher precedence than OR."""
+    left, pos = _eval_not(tokens, pos, selections, event)
+    while pos < len(tokens) and tokens[pos] == "and":
+        pos += 1  # consume 'and'
+        right, pos = _eval_not(tokens, pos, selections, event)
+        left = left and right
+    return left, pos
+
+
+def _eval_not(tokens: list[str], pos: int, selections: dict, event: LogEvent) -> tuple[bool, int]:
+    """NOT has highest precedence."""
+    if pos < len(tokens) and tokens[pos] == "not":
+        pos += 1  # consume 'not'
+        result, pos = _eval_not(tokens, pos, selections, event)
+        return not result, pos
+    return _eval_atom(tokens, pos, selections, event)
+
+
+def _eval_atom(tokens: list[str], pos: int, selections: dict, event: LogEvent) -> tuple[bool, int]:
+    """Atom: selection name, '1 of X*', 'all of them', or '(' expr ')'."""
+    if pos >= len(tokens):
+        return False, pos
+
+    token = tokens[pos]
+
+    # Parenthesized expression
+    if token == "(":
+        pos += 1  # consume '('
+        result, pos = _eval_or(tokens, pos, selections, event)
+        if pos < len(tokens) and tokens[pos] == ")":
+            pos += 1  # consume ')'
+        return result, pos
+
+    # "1 of X*" or "all of them"
+    token_lower = token.lower()
+    of_match = re.match(r"(1|all)\s+of\s+(\w+\*|them)", token_lower)
     if of_match:
-        quantifier, prefix = of_match.groups()
-        matching_selections = {k: v for k, v in selections.items() if k.startswith(prefix)}
-        if not matching_selections:
-            return False
-        if quantifier == "1":
-            return any(_selection_matches(event, sel) for sel in matching_selections.values())
-        else:  # all
-            return all(_selection_matches(event, sel) for sel in matching_selections.values())
-
-    # Handle "1 of them" / "all of them"
-    of_them = re.match(r"(1|all)\s+of\s+them", condition_str)
-    if of_them:
-        quantifier = of_them.group(1)
-        if quantifier == "1":
-            return any(_selection_matches(event, sel) for sel in selections.values())
+        quantifier, target = of_match.groups()
+        pos += 1
+        if target == "them":
+            if quantifier == "1":
+                return any(_selection_matches(event, sel) for sel in selections.values()), pos
+            else:
+                return all(_selection_matches(event, sel) for sel in selections.values()), pos
         else:
-            return all(_selection_matches(event, sel) for sel in selections.values())
-
-    # Handle compound conditions with AND/OR/NOT
-    # Split on " and " first (lower precedence than OR in Sigma)
-    if " and " in condition_str.lower():
-        # Split carefully, respecting parentheses
-        parts = re.split(r"\s+and\s+", condition_str, flags=re.IGNORECASE)
-        return all(_parse_condition(p.strip(), selections, event) for p in parts)
-
-    if " or " in condition_str.lower():
-        parts = re.split(r"\s+or\s+", condition_str, flags=re.IGNORECASE)
-        return any(_parse_condition(p.strip(), selections, event) for p in parts)
-
-    # Handle NOT
-    not_match = re.match(r"not\s+(.+)", condition_str, re.IGNORECASE)
-    if not_match:
-        return not _parse_condition(not_match.group(1).strip(), selections, event)
-
-    # Handle parentheses
-    if condition_str.startswith("(") and condition_str.endswith(")"):
-        return _parse_condition(condition_str[1:-1].strip(), selections, event)
+            prefix = target.rstrip("*")
+            matching = {k: v for k, v in selections.items() if k.startswith(prefix)}
+            if not matching:
+                return False, pos
+            if quantifier == "1":
+                return any(_selection_matches(event, sel) for sel in matching.values()), pos
+            else:
+                return all(_selection_matches(event, sel) for sel in matching.values()), pos
 
     # Direct selection reference
-    if condition_str in selections:
-        return _selection_matches(event, selections[condition_str])
+    pos += 1
+    if token in selections:
+        return _selection_matches(event, selections[token]), pos
 
-    # "selection and not filter" pattern
-    parts = re.split(r"\s+and\s+not\s+", condition_str, flags=re.IGNORECASE)
-    if len(parts) == 2:
-        sel_name, filter_name = parts
-        sel_match = sel_name.strip() in selections and _selection_matches(event, selections[sel_name.strip()])
-        fil_match = filter_name.strip() in selections and _selection_matches(event, selections[filter_name.strip()])
-        return sel_match and not fil_match
-
-    return False
+    return False, pos
 
 
 class SigmaRule(DetectionRule):
@@ -377,6 +444,6 @@ def load_sigma_rules(sigma_path: Path) -> list[SigmaRule]:
                     continue
                 rules.append(SigmaRule(doc, source_file=str(yaml_file.name)))
         except Exception as e:
-            print(f"  Warning: Failed to load Sigma rule {yaml_file}: {e}", file=sys.stderr)
+            logging.getLogger("threatlens").warning("Failed to load Sigma rule %s: %s", yaml_file, e)
 
     return rules

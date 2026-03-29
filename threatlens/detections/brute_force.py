@@ -7,7 +7,7 @@ from typing import Any
 
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
-from threatlens.utils import group_by_time_window
+from threatlens.utils import find_dense_windows, group_by_time_window
 
 # Windows Event IDs for failed logons
 FAILED_LOGON_IDS = {4625, 4776}
@@ -44,7 +44,7 @@ class BruteForceDetector(DetectionRule):
             by_ip[key].append(event)
 
         for source, source_events in by_ip.items():
-            windows = group_by_time_window(source_events, self.window_seconds)
+            windows = find_dense_windows(source_events, self.window_seconds, self.threshold)
             for window in windows:
                 if len(window) >= self.threshold:
                     targets = {e.target_username or e.username for e in window}
