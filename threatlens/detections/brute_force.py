@@ -7,7 +7,7 @@ from typing import Any
 
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
-from threatlens.utils import find_dense_windows, group_by_time_window
+from threatlens.utils import find_dense_windows
 
 # Windows Event IDs for failed logons
 FAILED_LOGON_IDS = {4625, 4776}

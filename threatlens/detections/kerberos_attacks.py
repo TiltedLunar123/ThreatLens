@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
 
@@ -32,8 +30,7 @@ class KerberosAttackDetector(DetectionRule):
             raw_str = str(event.raw)
 
             # Kerberoasting: TGS request with RC4 for non-machine accounts
-            if event.event_id == TGS_REQUEST_ID:
-                if RC4_ENCRYPTION in raw_str or "0x17" in raw_str.lower():
+            if event.event_id == TGS_REQUEST_ID and (RC4_ENCRYPTION in raw_str or "0x17" in raw_str.lower()):
                     target = event.target_username or event.username or ""
                     # Machine accounts end with '$'
                     if target and not target.endswith("$"):
@@ -64,8 +61,7 @@ class KerberosAttackDetector(DetectionRule):
                         ))
 
             # AS-REP Roasting: TGT request with RC4
-            if event.event_id == TGT_REQUEST_ID:
-                if RC4_ENCRYPTION in raw_str or "0x17" in raw_str.lower():
+            if event.event_id == TGT_REQUEST_ID and (RC4_ENCRYPTION in raw_str or "0x17" in raw_str.lower()):
                     target = event.target_username or event.username or ""
                     alerts.append(Alert(
                         rule_name="Potential AS-REP Roasting",

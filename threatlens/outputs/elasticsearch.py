@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from datetime import datetime
 from typing import Any
 from urllib.error import HTTPError, URLError

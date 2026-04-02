@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from threatlens.models import EventCategory, LogEvent
+from threatlens.parsers.cef_parser import parse_cef_line
 
 # RFC 3164 pattern: <PRI>TIMESTAMP HOSTNAME APP[PID]: MESSAGE
 _RFC3164_RE = re.compile(
@@ -31,21 +32,6 @@ _RFC5424_RE = re.compile(
     r"(.*)$"                            # message + structured data
 )
 
-# CEF pattern: CEF:Version|Vendor|Product|Version|SignatureID|Name|Severity|Extension
-_CEF_RE = re.compile(
-    r"^CEF:(\d+)\|"                     # version
-    r"([^|]*)\|"                        # vendor
-    r"([^|]*)\|"                        # product
-    r"([^|]*)\|"                        # device version
-    r"([^|]*)\|"                        # signature id
-    r"([^|]*)\|"                        # name
-    r"([^|]*)\|"                        # severity
-    r"(.*)$"                            # extension
-)
-
-# CEF extension key=value parser
-_CEF_KV_RE = re.compile(r"(\w+)=((?:[^\\=]|\\.)*?)(?=\s+\w+=|$)")
-
 # Month abbreviation lookup for manual RFC 3164 timestamp parsing
 _MONTH_MAP = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -56,16 +42,6 @@ _MONTH_MAP = {
 _RFC3164_TS_RE = re.compile(
     r"^(\w{3})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})$"
 )
-
-# CEF severity mapping
-_CEF_SEVERITY_MAP = {
-    "0": EventCategory.UNKNOWN, "1": EventCategory.UNKNOWN,
-    "2": EventCategory.UNKNOWN, "3": EventCategory.AUTHENTICATION,
-    "4": EventCategory.AUTHENTICATION, "5": EventCategory.NETWORK,
-    "6": EventCategory.PROCESS, "7": EventCategory.PRIVILEGE,
-    "8": EventCategory.PRIVILEGE, "9": EventCategory.PRIVILEGE,
-    "10": EventCategory.PRIVILEGE,
-}
 
 # Keywords in syslog messages to categorize events
 _CATEGORY_KEYWORDS = {
@@ -229,77 +205,11 @@ def _parse_rfc5424(line: str) -> LogEvent | None:
 
 
 def _parse_cef(line: str) -> LogEvent | None:
-    """Parse a CEF (Common Event Format) line."""
-    # CEF may be embedded in a syslog header
-    cef_start = line.find("CEF:")
-    if cef_start < 0:
-        return None
+    """Parse a CEF (Common Event Format) line.
 
-    # Extract syslog header if present
-    syslog_header = line[:cef_start].strip() if cef_start > 0 else ""
-    cef_part = line[cef_start:]
-
-    match = _CEF_RE.match(cef_part)
-    if not match:
-        return None
-
-    cef_version, vendor, product, dev_version, sig_id, name, severity, extension = match.groups()
-
-    # Parse extension key=value pairs
-    ext_data: dict[str, str] = {}
-    for kv_match in _CEF_KV_RE.finditer(extension):
-        ext_data[kv_match.group(1)] = kv_match.group(2).strip()
-
-    # Extract hostname from syslog header if available
-    hostname = ext_data.get("dhost", ext_data.get("shost", ""))
-    if not hostname and syslog_header:
-        parts = syslog_header.split()
-        if len(parts) >= 2:
-            hostname = parts[1] if len(parts) > 1 else parts[0]
-
-    # Timestamp from extension or syslog header
-    ts_str = ext_data.get("rt", ext_data.get("end", ext_data.get("start", "")))
-    if not ts_str and syslog_header:
-        # Try to extract from syslog header
-        ts_match = re.search(r"(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})", syslog_header)
-        if ts_match:
-            ts_str = ts_match.group(1)
-
-    timestamp = _parse_syslog_timestamp(ts_str) if ts_str else datetime.min
-
-    category = _CEF_SEVERITY_MAP.get(severity, EventCategory.UNKNOWN)
-
-    raw = {
-        "cef_version": cef_version,
-        "vendor": vendor,
-        "product": product,
-        "device_version": dev_version,
-        "signature_id": sig_id,
-        "name": name,
-        "severity": severity,
-        "extension": ext_data,
-        "format": "cef",
-    }
-
-    try:
-        event_id = int(sig_id)
-    except (ValueError, TypeError):
-        event_id = 0
-
-    return LogEvent(
-        timestamp=timestamp,
-        event_id=event_id,
-        source=f"{vendor}/{product}",
-        category=category,
-        computer=hostname,
-        raw=raw,
-        username=ext_data.get("duser", ext_data.get("suser", "")),
-        source_ip=ext_data.get("src", ext_data.get("sourceAddress", "")),
-        process_name=ext_data.get("dproc", ext_data.get("sproc", "")),
-        command_line=ext_data.get("cs1", name),
-        target_username=ext_data.get("duser", ""),
-        domain=ext_data.get("dntdom", ""),
-    )
+    Delegates to the dedicated CEF parser to avoid code duplication.
+    """
+    return parse_cef_line(line)
 
 
 def _parse_line(line: str, fmt: str) -> LogEvent | None:

@@ -344,8 +344,8 @@ class SigmaRule(DetectionRule):
         self._logsource = sigma_def.get("logsource", {})
         self._category = _LOGSOURCE_CATEGORY_MAP.get(self._logsource.get("category", ""))
 
-        # Detection block
-        detection = sigma_def.get("detection", {})
+        # Detection block (copy to avoid mutating the original dict)
+        detection = dict(sigma_def.get("detection", {}))
         self._condition = detection.pop("condition", "selection")
         # Remaining keys are selection/filter blocks
         self._selections: dict[str, dict] = {}

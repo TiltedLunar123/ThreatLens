@@ -248,7 +248,7 @@ class TestSyslogParser:
 
         assert len(events) == 1
         assert events[0].source_ip == "10.0.1.50"
-        assert events[0].username == "admin"
+        assert events[0].target_username == "admin"
 
     def test_rfc3164_no_deprecation_warning(self):
         """Ensure the year-less timestamp path uses manual parsing, not strptime."""

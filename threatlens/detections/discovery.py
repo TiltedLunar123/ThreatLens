@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 from typing import Any
 
@@ -55,7 +54,6 @@ class DiscoveryDetector(DetectionRule):
             # Sliding window
             i = 0
             while i < len(user_events):
-                window_end_ts = user_events[i].timestamp
                 window = []
                 for j in range(i, len(user_events)):
                     delta = (user_events[j].timestamp - user_events[i].timestamp).total_seconds()

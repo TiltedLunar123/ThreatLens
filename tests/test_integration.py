@@ -7,7 +7,6 @@ from pathlib import Path
 from threatlens.cli import build_parser, run_scan
 from threatlens.config import load_user_config
 
-
 SAMPLE_DIR = Path(__file__).parent.parent / "sample_data"
 SAMPLE_LOG = SAMPLE_DIR / "sample_security_log.json"
 MIXED_LOG = SAMPLE_DIR / "mixed_enterprise_log.json"

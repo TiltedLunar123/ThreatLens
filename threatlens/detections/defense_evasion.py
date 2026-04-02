@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import re
-from typing import Any
-
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
-
 
 # Event IDs related to defense evasion
 LOG_CLEARED_IDS = {1102, 104}  # 1102 = Security log cleared, 104 = System log cleared

@@ -6,9 +6,6 @@ import argparse
 import logging
 import sys
 
-from threatlens.detections import ALL_DETECTORS
-from threatlens.report import print_banner
-
 # Re-export symbols that existing code and tests import from cli
 from threatlens.allowlist import _alert_allowed, load_allowlist  # noqa: F401
 from threatlens.config import (  # noqa: F401
@@ -17,8 +14,10 @@ from threatlens.config import (  # noqa: F401
     collect_log_files,
     load_rules_config,
 )
+from threatlens.detections import ALL_DETECTORS
 from threatlens.follower import _flush_follow_buffer, run_follow  # noqa: F401
-from threatlens.scanner import run_scan  # noqa: F401
+from threatlens.report import print_banner
+from threatlens.scanner import run_scan
 
 logger = logging.getLogger("threatlens")
 

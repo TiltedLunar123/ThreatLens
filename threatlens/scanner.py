@@ -200,7 +200,15 @@ def run_scan(args: Any) -> int:
 
     # Send to Elasticsearch if requested
     if args.elastic_url:
-        from threatlens.outputs.elasticsearch import send_to_elasticsearch
+        from threatlens.outputs.elasticsearch import (
+            ensure_index_template,
+            send_to_elasticsearch,
+        )
+        ensure_index_template(
+            args.elastic_url,
+            index_pattern=f"{args.elastic_index}-*",
+            api_key=args.elastic_api_key,
+        )
         success, errors = send_to_elasticsearch(
             filtered,
             es_url=args.elastic_url,

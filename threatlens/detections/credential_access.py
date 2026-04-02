@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
 
@@ -35,8 +33,7 @@ class CredentialAccessDetector(DetectionRule):
             raw_str = str(event.raw).lower()
 
             # LSASS access (Sysmon Event ID 10)
-            if event.event_id == SYSMON_PROCESS_ACCESS_ID:
-                if "lsass.exe" in raw_str:
+            if event.event_id == SYSMON_PROCESS_ACCESS_ID and "lsass.exe" in raw_str:
                     # Check TargetImage in raw data
                     target_image = ""
                     if isinstance(event.raw, dict):
@@ -69,15 +66,23 @@ class CredentialAccessDetector(DetectionRule):
 
             # SAM hive access (Event ID 4663)
             if event.event_id == OBJECT_ACCESS_ID:
-                if "sam" in raw_str:
-                    # Check if the object accessed is the SAM
-                    obj_name = ""
-                    if isinstance(event.raw, dict):
-                        ed = event.raw.get("EventData", event.raw)
-                        if isinstance(ed, dict):
-                            obj_name = str(ed.get("ObjectName", ""))
-                    if "sam" in obj_name.lower() or "sam" in raw_str:
-                        alerts.append(Alert(
+                obj_name = ""
+                if isinstance(event.raw, dict):
+                    ed = event.raw.get("EventData", event.raw)
+                    if isinstance(ed, dict):
+                        obj_name = str(ed.get("ObjectName", ""))
+                # Match the SAM registry hive path specifically, not just
+                # any string containing "sam" (avoids false positives on
+                # usernames like "samuel" or unrelated object paths)
+                obj_lower = obj_name.lower()
+                is_sam_hive = (
+                    "\\sam" in obj_lower
+                    or obj_lower.endswith("\\sam")
+                    or "\\config\\sam" in obj_lower
+                    or "hklm\\sam" in obj_lower
+                )
+                if is_sam_hive:
+                    alerts.append(Alert(
                             rule_name="SAM Hive Access",
                             severity=Severity.HIGH,
                             description=(

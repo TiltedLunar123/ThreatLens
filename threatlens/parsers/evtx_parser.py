@@ -8,7 +8,6 @@ Requires the optional ``python-evtx`` package::
 from __future__ import annotations
 
 import logging
-import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 from datetime import datetime

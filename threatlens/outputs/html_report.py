@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,122 @@ _SEVERITY_COLORS = {
     Severity.MEDIUM: "#06b6d4",
     Severity.LOW: "#22c55e",
 }
+
+
+_MITRE_TACTICS = [
+    "Initial Access",
+    "Execution",
+    "Persistence",
+    "Privilege Escalation",
+    "Defense Evasion",
+    "Credential Access",
+    "Discovery",
+    "Lateral Movement",
+    "Collection",
+    "Exfiltration",
+    "Command and Control",
+    "Impact",
+]
+
+
+def _build_mitre_heatmap(alerts: list[Alert]) -> str:
+    """Generate an HTML heatmap grid of MITRE ATT&CK tactics and techniques."""
+    # Group alerts by tactic -> technique -> count
+    tactic_techniques: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for a in alerts:
+        if a.mitre_tactic and a.mitre_technique:
+            tactic_techniques[a.mitre_tactic][a.mitre_technique] += 1
+
+    # If no MITRE-tagged alerts, skip the heatmap entirely
+    if not tactic_techniques:
+        return ""
+
+    # Find global max count for color scaling
+    max_count = max(
+        count
+        for techniques in tactic_techniques.values()
+        for count in techniques.values()
+    )
+
+    def _cell_bg(count: int) -> str:
+        """Return a background color interpolated from dim to bright cyan."""
+        if max_count <= 1:
+            ratio = 1.0
+        else:
+            ratio = count / max_count
+        # Interpolate between #1e293b (0 alerts) and #0e7490 (max alerts)
+        r = int(30 + (14 - 30) * ratio)
+        g = int(41 + (116 - 41) * ratio)
+        b = int(59 + (144 - 59) * ratio)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    # Build column HTML
+    columns_html = []
+    for tactic in _MITRE_TACTICS:
+        techniques = tactic_techniques.get(tactic, {})
+
+        # Header cell
+        has_hits = bool(techniques)
+        header_style = (
+            "background:#0f172a;color:#38bdf8;font-weight:bold;"
+            if has_hits
+            else "background:#0f172a;color:#475569;font-weight:bold;"
+        )
+
+        cells_html = ""
+        if techniques:
+            for tech_name, count in sorted(
+                techniques.items(), key=lambda t: -t[1]
+            ):
+                bg = _cell_bg(count)
+                cells_html += (
+                    f'<div style="background:{bg};border-radius:4px;padding:6px 8px;'
+                    f'margin-bottom:4px;font-size:0.78em;color:#e2e8f0;'
+                    f'display:flex;justify-content:space-between;align-items:center;">'
+                    f'<span style="overflow:hidden;text-overflow:ellipsis;'
+                    f'white-space:nowrap;max-width:80%;"'
+                    f' title="{html.escape(tech_name)}">{html.escape(tech_name)}</span>'
+                    f'<span style="background:#0f172a;color:#38bdf8;border-radius:3px;'
+                    f'padding:1px 6px;font-weight:bold;font-size:0.9em;'
+                    f'flex-shrink:0;margin-left:4px;">{count}</span></div>'
+                )
+        else:
+            cells_html = (
+                '<div style="color:#334155;font-size:0.8em;'
+                'text-align:center;padding:12px 0;">--</div>'
+            )
+
+        tactic_total = sum(techniques.values())
+        count_badge = ""
+        if tactic_total > 0:
+            count_badge = (
+                f'<span style="background:#38bdf8;color:#0f172a;border-radius:10px;'
+                f'padding:1px 7px;font-size:0.75em;font-weight:bold;'
+                f'margin-left:6px;">{tactic_total}</span>'
+            )
+
+        columns_html.append(
+            f'<div style="min-width:155px;max-width:180px;flex:1 1 155px;">'
+            f'<div style="{header_style}padding:8px 6px;border-radius:6px 6px 0 0;'
+            f'text-align:center;font-size:0.78em;border-bottom:2px solid '
+            f'{"#38bdf8" if has_hits else "#1e293b"};'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"'
+            f' title="{html.escape(tactic)}">'
+            f'{html.escape(tactic)}{count_badge}</div>'
+            f'<div style="padding:6px 4px;">{cells_html}</div>'
+            f'</div>'
+        )
+
+    return (
+        '<div style="background:#1e293b;border-radius:12px;padding:20px;'
+        'margin:30px 0;">'
+        '<h2 style="color:#38bdf8;margin-bottom:16px;font-size:1.25em;">'
+        'MITRE ATT&amp;CK Coverage</h2>'
+        '<div style="overflow-x:auto;">'
+        '<div style="display:flex;gap:4px;min-width:max-content;">'
+        + "".join(columns_html)
+        + '</div></div></div>'
+    )
 
 
 def _severity_counts(alerts: list[Alert]) -> dict[str, int]:
@@ -150,6 +267,7 @@ def export_html(
     """Export alerts to a self-contained HTML report with charts."""
     counts = _severity_counts(alerts)
     donut_svg = _donut_chart_svg(counts, size=200)
+    mitre_heatmap = _build_mitre_heatmap(alerts)
 
     severity_order = {Severity.CRITICAL: 0, Severity.HIGH: 1, Severity.MEDIUM: 2, Severity.LOW: 3}
     sorted_alerts = sorted(alerts, key=lambda a: severity_order.get(a.severity, 99))
@@ -218,6 +336,8 @@ def export_html(
     </div>
 
     <div class="legend">{legend_items}</div>
+
+    {mitre_heatmap}
 
     <div class="alerts-section">
         <h2>Alerts ({len(alerts)})</h2>

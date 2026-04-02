@@ -39,8 +39,7 @@ class InitialAccessDetector(DetectionRule):
                 continue
 
             # Suspicious remote interactive logon from external IPs
-            if event.logon_type == REMOTE_INTERACTIVE_LOGON:
-                if event.source_ip and not is_private_ip(event.source_ip):
+            if event.logon_type == REMOTE_INTERACTIVE_LOGON and event.source_ip and not is_private_ip(event.source_ip):
                     alerts.append(Alert(
                         rule_name="External RDP Logon",
                         severity=Severity.HIGH,

@@ -2,7 +2,6 @@
 
 import tempfile
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch
 
 from tests.conftest import make_failed_logon
@@ -64,6 +63,7 @@ class TestFollowWithMockAppends:
     def test_follow_mock_file_append(self, capsys):
         """Test follow with a mock file that simulates appended lines."""
         import json
+
         from threatlens.cli import build_parser
         from threatlens.follower import run_follow
 

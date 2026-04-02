@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import re
-from typing import Any
-
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
 
@@ -123,11 +120,11 @@ class PersistenceDetector(DetectionRule):
 
             # Startup folder modifications
             cmd_lower = (event.command_line or "").lower()
-            proc_lower = (event.process_name or "").lower()
             raw_lower = str(event.raw).lower()
-            if any(kw in raw_lower or kw in cmd_lower for kw in _STARTUP_KEYWORDS):
-                # Avoid duplicate with registry run key alert
-                if event.event_id != SYSMON_REGISTRY_ID:
+            if (
+                any(kw in raw_lower or kw in cmd_lower for kw in _STARTUP_KEYWORDS)
+                and event.event_id != SYSMON_REGISTRY_ID
+            ):
                     alerts.append(Alert(
                         rule_name="Startup Folder Modified",
                         severity=Severity.MEDIUM,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from threatlens.detections.base import DetectionRule
 from threatlens.models import Alert, LogEvent, Severity
@@ -42,8 +41,6 @@ class ExfiltrationDetector(DetectionRule):
             cmd = event.command_line or ""
             if not cmd:
                 continue
-
-            cmd_lower = cmd.lower()
 
             # Suspicious archive creation targeting sensitive paths
             for pattern in _ARCHIVE_PATTERNS:
