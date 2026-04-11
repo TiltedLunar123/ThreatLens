@@ -218,9 +218,11 @@ def run_scan(args: Any) -> int:
         )
         print(f"  Elasticsearch: {success} indexed, {errors} errors\n")
 
-    # Determine exit code based on --fail-on threshold (defaults to critical)
-    fail_on = getattr(args, "fail_on", None) or "critical"
-    fail_sev = Severity(fail_on)
-    fail_index = severity_order.index(fail_sev)
-    has_actionable = any(severity_order.index(a.severity) >= fail_index for a in filtered)
-    return 2 if has_actionable else 0
+    # Determine exit code based on --fail-on threshold (only when explicitly set)
+    fail_on = getattr(args, "fail_on", None)
+    if fail_on:
+        fail_sev = Severity(fail_on)
+        fail_index = severity_order.index(fail_sev)
+        has_actionable = any(severity_order.index(a.severity) >= fail_index for a in filtered)
+        return 2 if has_actionable else 0
+    return 0
