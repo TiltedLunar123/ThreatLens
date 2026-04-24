@@ -93,6 +93,11 @@ def run_follow(args: Any) -> int:
         print("\n  Stopped.\n")
         return 0
 
+    # Safety net: the tail loop above is `while True`, so execution only
+    # reaches here when the loop is broken out of in the future without
+    # raising KeyboardInterrupt. Keeps the declared -> int return honest.
+    return 0
+
 
 def _flush_follow_buffer(
     events: list,

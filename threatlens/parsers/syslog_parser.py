@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import re
 from collections.abc import Iterator
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from threatlens.models import EventCategory, LogEvent
@@ -86,9 +87,19 @@ def _categorize_message(message: str) -> EventCategory:
 
 
 def _extract_ip(message: str) -> str:
-    """Extract first IP address from a message."""
-    match = _IP_RE.search(message)
-    return match.group(1) if match else ""
+    """Extract first valid IPv4 address from a message.
+
+    The regex is permissive on octet range, so validate each candidate
+    with ipaddress.ip_address and skip bogus values like 999.999.999.999.
+    """
+    for match in _IP_RE.finditer(message):
+        candidate = match.group(1)
+        try:
+            ipaddress.IPv4Address(candidate)
+        except (ValueError, ipaddress.AddressValueError):
+            continue
+        return candidate
+    return ""
 
 
 def _extract_username(message: str) -> str:
@@ -115,14 +126,21 @@ def _parse_syslog_timestamp(ts_str: str) -> datetime:
         month_abbr, day, hour, minute, second = m.groups()
         month = _MONTH_MAP.get(month_abbr.lower())
         if month:
-            return datetime(
-                year=datetime.now().year,
+            now = datetime.now()
+            parsed = datetime(
+                year=now.year,
                 month=month,
                 day=int(day),
                 hour=int(hour),
                 minute=int(minute),
                 second=int(second),
             )
+            # RFC 3164 omits the year. If the current-year guess lands
+            # more than a day in the future, the log was written in the
+            # previous calendar year (December log parsed in January).
+            if parsed - now > timedelta(days=1):
+                parsed = parsed.replace(year=now.year - 1)
+            return parsed
 
     # Try ISO format (RFC 5424)
     clean = re.sub(r"[+-]\d{2}:\d{2}$", "", stripped)

@@ -34,7 +34,10 @@ def _alert_allowed(alert: Any, allowlist: list[dict[str, Any]]) -> str | None:
     """
     for entry in allowlist:
         match = True
-        if "rule_name" in entry and entry["rule_name"].lower() not in alert.rule_name.lower():
+        # Exact (case-insensitive) equality on rule_name -- substring matching
+        # caused entries like "Brute" to silence every rule containing that
+        # word (Brute-Force Detected, Brute Force Attack, ...).
+        if "rule_name" in entry and entry["rule_name"].lower() != alert.rule_name.lower():
             match = False
         if "username" in entry:
             usernames = {ev.get("username", "") for ev in alert.evidence}

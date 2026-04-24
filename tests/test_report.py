@@ -135,9 +135,10 @@ class TestExportCsv:
 
         content = out.read_text(encoding="utf-8")
         lines = content.strip().split("\n")
-        assert len(lines) == 5  # metadata + header + 3 alert rows
-        assert "Timestamp" in lines[1]
-        assert "Severity" in lines[1]
+        assert len(lines) == 4  # header + 3 alert rows (no comment row)
+        assert "Timestamp" in lines[0]
+        assert "Severity" in lines[0]
+        assert not lines[0].startswith("#")
 
     def test_csv_empty(self):
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
@@ -146,4 +147,5 @@ class TestExportCsv:
 
         content = out.read_text(encoding="utf-8")
         lines = content.strip().split("\n")
-        assert len(lines) == 2  # metadata + header only
+        assert len(lines) == 1  # header only (no comment row)
+        assert lines[0].startswith("Timestamp")

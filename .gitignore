@@ -47,3 +47,6 @@ reports/
 *.csv
 *.log
 *.bak
+
+# Local per-day work plan (not committed)
+PLAN_TODAY.md
