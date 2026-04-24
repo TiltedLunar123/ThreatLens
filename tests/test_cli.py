@@ -218,8 +218,9 @@ class TestRunScan:
         run_scan(args)
 
         content = Path(out).read_text(encoding="utf-8")
-        assert "ThreatLens" in content
         assert "Severity" in content
+        # CSV no longer leads with a comment row (it broke standard parsers).
+        assert not content.lstrip().startswith("#")
 
     def test_scan_with_html_output(self):
         sample = Path(__file__).parent.parent / "sample_data" / "sample_security_log.json"
@@ -328,6 +329,7 @@ class TestAllowlist:
         assert entries == []
 
     def test_alert_allowed_matches(self):
+        # Exact (case-insensitive) equality on rule_name.
         alert = Alert(
             rule_name="Brute-Force Detected",
             severity=Severity.HIGH,
@@ -335,7 +337,9 @@ class TestAllowlist:
             timestamp=datetime(2025, 1, 15, 8, 0, 0),
             evidence=[{"username": "svc_monitor", "computer": "DC-01"}],
         )
-        allowlist = [{"rule_name": "Brute-Force", "username": "svc_monitor"}]
+        allowlist = [
+            {"rule_name": "brute-force detected", "username": "svc_monitor"}
+        ]
         assert _alert_allowed(alert, allowlist) is not None
 
     def test_alert_allowed_no_match(self):
@@ -346,7 +350,9 @@ class TestAllowlist:
             timestamp=datetime(2025, 1, 15, 8, 0, 0),
             evidence=[{"username": "jdoe", "computer": "WS-PC01"}],
         )
-        allowlist = [{"rule_name": "Brute-Force", "username": "svc_monitor"}]
+        allowlist = [
+            {"rule_name": "Brute-Force Detected", "username": "svc_monitor"}
+        ]
         assert _alert_allowed(alert, allowlist) is None
 
     def test_scan_with_allowlist(self):
@@ -359,7 +365,7 @@ class TestAllowlist:
         ) as f:
             f.write(
                 "allowlist:\n"
-                '  - rule_name: "Brute-Force"\n'
+                '  - rule_name: "Brute-Force Detected"\n'
             )
             f.flush()
             allow_path = f.name
@@ -426,7 +432,11 @@ class TestAllowlistEnhanced:
             timestamp=datetime(2025, 1, 15, 8, 0, 0),
             evidence=[{"username": "svc_bot", "computer": "DC-01"}],
         )
-        allowlist = [{"rule_name": "Brute-Force", "username": "svc_bot", "reason": "Service account"}]
+        allowlist = [{
+            "rule_name": "Brute-Force Detected",
+            "username": "svc_bot",
+            "reason": "Service account",
+        }]
         result = _alert_allowed(alert, allowlist)
         assert result == "Service account"
 
@@ -611,7 +621,7 @@ class TestScanErrorPaths:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
             f.write(
                 'allowlist:\n'
-                '  - rule_name: "Brute-Force"\n'
+                '  - rule_name: "Brute-Force Detected"\n'
                 '    reason: "Expected noise"\n'
             )
             f.flush()

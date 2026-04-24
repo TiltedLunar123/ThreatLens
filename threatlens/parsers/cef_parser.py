@@ -9,7 +9,7 @@ Extension key=value pairs support escaped characters (\\=, \\\\, \\n).
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from threatlens.models import EventCategory, LogEvent
@@ -84,10 +84,12 @@ def _parse_cef_timestamp(ts_str: str) -> datetime:
 
     ts_str = ts_str.strip()
 
-    # Try epoch milliseconds
+    # Try epoch milliseconds (utcfromtimestamp is deprecated in 3.12+)
     try:
         epoch_ms = int(ts_str)
-        return datetime.utcfromtimestamp(epoch_ms / 1000)
+        return datetime.fromtimestamp(
+            epoch_ms / 1000, tz=timezone.utc
+        ).replace(tzinfo=None)
     except (ValueError, OSError):
         pass
 
@@ -97,14 +99,20 @@ def _parse_cef_timestamp(ts_str: str) -> datetime:
         month_abbr, day, hour, minute, second = m.groups()
         month = _MONTH_MAP.get(month_abbr.lower())
         if month:
-            return datetime(
-                year=datetime.now().year,
+            now = datetime.now()
+            parsed = datetime(
+                year=now.year,
                 month=month,
                 day=int(day),
                 hour=int(hour),
                 minute=int(minute),
                 second=int(second),
             )
+            # RFC 3164 omits the year -- assume previous year when the
+            # current-year guess ends up more than a day in the future.
+            if parsed - now > timedelta(days=1):
+                parsed = parsed.replace(year=now.year - 1)
+            return parsed
 
     # Try ISO formats
     clean = re.sub(r"[+-]\d{2}:\d{2}$", "", ts_str)

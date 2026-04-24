@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import ipaddress
+import logging
 from collections import Counter
 from collections.abc import Sequence
 
 from threatlens.models import LogEvent, Severity
+
+_logger = logging.getLogger("threatlens")
 
 # Terminal color helpers (ANSI)
 COLORS = {
@@ -67,14 +70,21 @@ def count_by_field(events: Sequence[LogEvent], field: str) -> Counter:
 
 
 def is_private_ip(ip: str) -> bool:
-    """Check if an IP address is in a private/reserved range."""
+    """Check if an IP address is in a private/reserved range.
+
+    Returns True for empty/dash sentinels and for addresses in private,
+    loopback, or reserved ranges. Malformed inputs log a debug message
+    and return False so callers can distinguish them from valid public
+    addresses through the log stream.
+    """
     if not ip or ip == "-":
         return True
     try:
         addr = ipaddress.ip_address(ip)
-        return addr.is_private or addr.is_loopback or addr.is_reserved
     except ValueError:
+        _logger.debug("is_private_ip: invalid address %r treated as non-private", ip)
         return False
+    return addr.is_private or addr.is_loopback or addr.is_reserved
 
 
 def find_dense_windows(
