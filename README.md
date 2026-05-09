@@ -12,14 +12,14 @@
 
 <p align="center">
   <b>Log Analysis & Threat Hunting CLI for Security Analysts</b><br>
-  Parse EVTX, JSON, Syslog & CEF logs &mdash; run Sigma rules &mdash; detect multi-stage attacks &mdash; get actionable alerts mapped to MITRE ATT&CK.
+  Parse EVTX, JSON, Syslog & CEF logs - run Sigma rules - detect multi-stage attacks - get actionable alerts mapped to MITRE ATT&CK.
 </p>
 
 ---
 
 ## Why ThreatLens?
 
-Security teams deal with thousands of log events daily. ThreatLens automates the first pass of triage &mdash; catching brute-force attacks, lateral movement, privilege escalation, suspicious process execution, and multi-stage kill chains &mdash; so analysts can focus on real investigation instead of scrolling through raw logs.
+Security teams deal with thousands of log events daily. ThreatLens automates the first pass of triage - catching brute-force attacks, lateral movement, privilege escalation, suspicious process execution, and multi-stage kill chains - so analysts can focus on real investigation instead of scrolling through raw logs.
 
 It runs entirely offline, requires no infrastructure, and produces structured output that feeds into existing SIEM workflows or stands alone as a report.
 
@@ -123,7 +123,7 @@ threatlens scan sample_data/sample_security_log.json
 |--------|------------|
 | Built-in detections | 12 modules tunable via `rules/default_rules.yaml` |
 | Custom YAML rules | Field matching with 12 operators, grouping, thresholds, and time windows |
-| Sigma compatibility | Load community [Sigma rules](https://github.com/SigmaHQ/sigma) directly &mdash; selections, filters, conditions, field modifiers |
+| Sigma compatibility | Load community [Sigma rules](https://github.com/SigmaHQ/sigma) directly - selections, filters, conditions, field modifiers |
 | Plugin system | Load custom Python detectors from a directory with `--plugin-dir` |
 
 ### Input Formats
@@ -131,7 +131,7 @@ threatlens scan sample_data/sample_security_log.json
 | Format | Extensions | Notes |
 |--------|-----------|-------|
 | JSON / NDJSON | `.json` `.ndjson` `.jsonl` | Windows Event Log JSON exports, generic JSON logs |
-| EVTX | `.evtx` | Native Windows Event Log &mdash; no manual export step needed |
+| EVTX | `.evtx` | Native Windows Event Log - no manual export step needed |
 | Syslog | `.log` `.syslog` | RFC 3164 and RFC 5424 with auto-detection |
 | CEF | `.cef` | Common Event Format (ArcSight, Splunk, etc.) |
 
@@ -418,7 +418,7 @@ threatlens scan logs/ --sigma-rules sigma/rules/windows/
 
 Detection results from running ThreatLens against the included sample datasets:
 
-### `sample_security_log.json` &mdash; 26 events (focused attack simulation)
+### `sample_security_log.json` - 26 events (focused attack simulation)
 
 | Severity | Count | Detections |
 |----------|-------|------------|
@@ -427,14 +427,14 @@ Detection results from running ThreatLens against the included sample datasets:
 | MEDIUM | 2 | Brute-force (7 failed logons), password spray (5 targets) |
 | LOW | 1 | Privilege enumeration (whoami /priv) |
 
-### `mixed_enterprise_log.json` &mdash; 52 events (benign noise + embedded attack)
+### `mixed_enterprise_log.json` - 52 events (benign noise + embedded attack)
 
 | Severity | Count | Detections |
 |----------|-------|------------|
 | CRITICAL | 1 | SAM registry hive access |
 | HIGH | 9 | Brute-force, lateral movement, privilege escalation, encoded PowerShell, certutil download, scheduled task, service creation, 2 attack chains |
-| MEDIUM | 0 | &mdash; |
-| LOW | 0 | &mdash; |
+| MEDIUM | 0 | - |
+| LOW | 0 | - |
 
 ### Key Takeaways
 
@@ -458,9 +458,9 @@ Detection results from running ThreatLens against the included sample datasets:
  +----------+              +---------------------+          +--------------+
 ```
 
-1. **Parse** &mdash; Logs are loaded from any supported format and normalized into a common `LogEvent` model. Format is auto-detected from the file extension or forced with `--input-format`.
-2. **Detect** &mdash; Built-in detections, custom YAML rules, Sigma rules, and plugin detectors analyze the event stream using time-window grouping, field correlation, and regex matching.
-3. **Report** &mdash; Alerts are ranked by severity, mapped to MITRE ATT&CK, and output with actionable recommendations.
+1. **Parse** - Logs are loaded from any supported format and normalized into a common `LogEvent` model. Format is auto-detected from the file extension or forced with `--input-format`.
+2. **Detect** - Built-in detections, custom YAML rules, Sigma rules, and plugin detectors analyze the event stream using time-window grouping, field correlation, and regex matching.
+3. **Report** - Alerts are ranked by severity, mapped to MITRE ATT&CK, and output with actionable recommendations.
 
 ---
 
@@ -546,9 +546,9 @@ ThreatLens/
 
 | Code | Meaning |
 |------|---------|
-| `0`  | Scan completed &mdash; no alerts at or above the `--fail-on` threshold |
+| `0`  | Scan completed - no alerts at or above the `--fail-on` threshold |
 | `1`  | Error (bad input, missing files, parse failure) |
-| `2`  | Scan completed &mdash; alerts found at or above the `--fail-on` threshold |
+| `2`  | Scan completed - alerts found at or above the `--fail-on` threshold |
 
 Use exit codes in CI pipelines to gate deployments or trigger incident workflows.
 
@@ -584,7 +584,7 @@ Use this tool only on systems and logs you have explicit authorization to analyz
 
 ## Author
 
-**Jude Hilgendorf** &mdash; [GitHub](https://github.com/TiltedLunar123)
+**Jude Hilgendorf** - [GitHub](https://github.com/TiltedLunar123)
 
 ## License
 
