@@ -1,0 +1,24 @@
+title: mshta.exe Loading Remote HTA
+id: tl-exec-mshta-01
+status: stable
+description: mshta.exe with an http(s) or unc argument indicates execution of a remote HTA payload.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1218/005/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\mshta.exe'
+        CommandLine|contains:
+            - 'http://'
+            - 'https://'
+            - '\\\\'
+    condition: selection
+level: high
+tags:
+    - attack.defense_evasion
+    - attack.t1218.005
+falsepositives:
+    - Legacy HTA-based admin consoles.

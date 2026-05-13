@@ -1,0 +1,29 @@
+title: PowerShell Encoded Command Execution
+id: tl-exec-ps-enc-01
+status: stable
+description: PowerShell launched with -EncodedCommand or short aliases, a common defender-bypass technique.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+        CommandLine|contains:
+            - ' -enc '
+            - ' -encodedcommand'
+            - ' -e '
+            - ' -ec '
+    filter:
+        CommandLine|contains: 'sccm'
+    condition: selection and not filter
+level: high
+tags:
+    - attack.execution
+    - attack.t1059.001
+falsepositives:
+    - Some SCCM and Intune deployments use encoded PowerShell.

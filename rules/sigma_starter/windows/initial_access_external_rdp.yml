@@ -1,0 +1,46 @@
+title: External RDP Logon Success
+id: tl-init-rdp-01
+status: stable
+description: 4624 with LogonType 10 (RDP) from a source IP outside the RFC1918 ranges.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1078/
+logsource:
+    category: authentication
+    product: windows
+detection:
+    selection:
+        EventID: 4624
+        LogonType: 10
+    filter_rfc1918:
+        IpAddress|startswith:
+            - '10.'
+            - '192.168.'
+            - '172.16.'
+            - '172.17.'
+            - '172.18.'
+            - '172.19.'
+            - '172.20.'
+            - '172.21.'
+            - '172.22.'
+            - '172.23.'
+            - '172.24.'
+            - '172.25.'
+            - '172.26.'
+            - '172.27.'
+            - '172.28.'
+            - '172.29.'
+            - '172.30.'
+            - '172.31.'
+            - '127.'
+    filter_local:
+        IpAddress:
+            - '-'
+            - '::1'
+    condition: selection and not 1 of filter_*
+level: high
+tags:
+    - attack.initial_access
+    - attack.t1078
+falsepositives:
+    - Authorized remote-work jump hosts that NAT into a public IP.

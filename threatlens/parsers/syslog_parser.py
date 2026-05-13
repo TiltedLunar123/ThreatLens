@@ -75,6 +75,27 @@ _USER_PATTERNS = [
     re.compile(r"(?:Accepted|Failed) \S+ for (\w+)\s+from", re.IGNORECASE),
 ]
 
+# Normalize common Unix-syslog auth patterns to canonical Windows event IDs.
+# Lets Windows-shaped detectors (brute force, etc.) fire on SSH logs.
+_AUTH_PATTERNS = [
+    (re.compile(r"\bfailed password\b", re.IGNORECASE), 4625),
+    (re.compile(r"\bauthentication failure\b", re.IGNORECASE), 4625),
+    (re.compile(r"\binvalid user\b", re.IGNORECASE), 4625),
+    (re.compile(r"\baccepted password\b", re.IGNORECASE), 4624),
+    (re.compile(r"\baccepted publickey\b", re.IGNORECASE), 4624),
+    (re.compile(r"\bsession opened\b", re.IGNORECASE), 4624),
+    (re.compile(r"\bsession closed\b", re.IGNORECASE), 4634),
+    (re.compile(r"\bsudo:.*COMMAND=", re.IGNORECASE), 4688),
+]
+
+
+def _canonical_event_id(message: str, fallback: int) -> int:
+    """Map a syslog message to a canonical Windows event ID when recognizable."""
+    for pattern, event_id in _AUTH_PATTERNS:
+        if pattern.search(message):
+            return event_id
+    return fallback
+
 
 def _categorize_message(message: str) -> EventCategory:
     """Determine event category from syslog message content."""
@@ -155,9 +176,10 @@ def _parse_rfc3164(line: str) -> LogEvent | None:
         "format": "rfc3164",
     }
 
+    fallback_id = int(priority) if priority else 0
     return LogEvent(
         timestamp=timestamp,
-        event_id=int(priority) if priority else 0,
+        event_id=_canonical_event_id(message, fallback_id),
         source=app,
         category=category,
         computer=hostname,
@@ -192,7 +214,7 @@ def _parse_rfc5424(line: str) -> LogEvent | None:
 
     return LogEvent(
         timestamp=timestamp,
-        event_id=int(priority),
+        event_id=_canonical_event_id(message, int(priority)),
         source=app,
         category=category,
         computer=hostname,

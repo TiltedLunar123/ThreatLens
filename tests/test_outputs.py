@@ -193,3 +193,160 @@ class TestEnsureIndexTemplate:
             ensure_index_template("http://localhost:9200", api_key="secret")
             req = mock_urlopen.call_args[0][0]
             assert "ApiKey secret" in req.get_header("Authorization")
+
+
+class TestWazuhOutput:
+    def test_build_event_structure(self):
+        from threatlens.outputs.wazuh import _build_event
+
+        alert = Alert(
+            rule_name="Brute Force",
+            severity=Severity.HIGH,
+            description="oops",
+            timestamp=datetime(2025, 1, 15, 8, 30, 0),
+            mitre_tactic="Credential Access",
+            mitre_technique="T1110",
+        )
+        event = _build_event(alert, total_events=42)
+        assert event["rule"]["level"] == 12
+        assert "threatlens" in event["rule"]["groups"]
+        assert event["data"]["mitre_technique"] == "T1110"
+        assert event["data"]["total_events_analyzed"] == 42
+
+    def test_send_empty_alerts(self):
+        from threatlens.outputs.wazuh import send_to_wazuh
+
+        success, errors = send_to_wazuh([], "https://wazuh:55000")
+        assert success == 0
+        assert errors == 0
+
+    def test_send_with_token_success(self):
+        from unittest.mock import MagicMock, patch
+
+        from threatlens.outputs.wazuh import send_to_wazuh
+        with patch(
+            "threatlens.outputs.wazuh.urlopen",
+            return_value=MagicMock(read=MagicMock(return_value=b"{}")),
+        ):
+            success, errors = send_to_wazuh(
+                _sample_alerts(),
+                "https://wazuh:55000",
+                auth_token="t0k3n",
+            )
+        assert success == 2
+        assert errors == 0
+
+    def test_send_missing_auth(self):
+        from threatlens.outputs.wazuh import send_to_wazuh
+
+        success, errors = send_to_wazuh(_sample_alerts(), "https://wazuh:55000")
+        assert success == 0
+        assert errors == 2
+
+
+class TestSplunkOutput:
+    def test_build_event_structure(self):
+        from threatlens.outputs.splunk import _build_event
+
+        alert = Alert(
+            rule_name="Bad",
+            severity=Severity.CRITICAL,
+            description="bad",
+            timestamp=datetime(2025, 1, 15, 8, 30, 0),
+        )
+        ev = _build_event(alert, total_events=10, index="main",
+                          sourcetype="threatlens:alert", host="h", source="s")
+        assert ev["index"] == "main"
+        assert ev["sourcetype"] == "threatlens:alert"
+        assert ev["event"]["rule_name"] == "Bad"
+        assert ev["event"]["tool"] == "threatlens"
+
+    def test_send_empty_alerts(self):
+        from threatlens.outputs.splunk import send_to_splunk
+
+        success, errors = send_to_splunk([], "https://splunk:8088", token="t")
+        assert success == 0
+        assert errors == 0
+
+    def test_send_appends_collector_path(self):
+        from unittest.mock import MagicMock, patch
+
+        from threatlens.outputs.splunk import send_to_splunk
+        with patch(
+            "threatlens.outputs.splunk.urlopen",
+            return_value=MagicMock(read=MagicMock(return_value=b'{"code": 0}')),
+        ) as mock_open:
+            send_to_splunk(_sample_alerts(), "https://splunk:8088", token="t")
+            req = mock_open.call_args[0][0]
+            assert req.full_url.endswith("/services/collector/event")
+            assert req.get_header("Authorization") == "Splunk t"
+
+    def test_send_non_zero_code(self):
+        from unittest.mock import MagicMock, patch
+
+        from threatlens.outputs.splunk import send_to_splunk
+        with patch(
+            "threatlens.outputs.splunk.urlopen",
+            return_value=MagicMock(read=MagicMock(return_value=b'{"code": 8}')),
+        ):
+            success, errors = send_to_splunk(_sample_alerts(), "https://splunk:8088", token="t")
+        assert success == 0
+        assert errors == 2
+
+
+class TestNavigatorOutput:
+    def test_layer_structure(self):
+        from threatlens.outputs.navigator import build_navigator_layer
+
+        alerts = _sample_alerts()
+        alerts[0].mitre_technique = "T1059.001"
+        alerts[1].mitre_technique = "T1110"
+        layer = build_navigator_layer(alerts)
+        assert layer["versions"]["layer"] == "4.5"
+        assert layer["domain"] == "enterprise-attack"
+        tids = {t["techniqueID"] for t in layer["techniques"]}
+        assert "T1059.001" in tids
+        assert "T1110" in tids
+
+    def test_export_round_trip(self):
+        import json
+
+        from threatlens.outputs.navigator import export_navigator_layer
+        alerts = _sample_alerts()
+        alerts[0].mitre_technique = "T1003"
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            out = Path(f.name)
+        export_navigator_layer(alerts, out)
+        data = json.loads(out.read_text(encoding="utf-8"))
+        assert data["name"] == "ThreatLens Scan"
+        assert any(t["techniqueID"] == "T1003" for t in data["techniques"])
+
+
+class TestStixOutput:
+    def test_bundle_structure(self):
+        from threatlens.outputs.stix import build_stix_bundle
+
+        alerts = _sample_alerts()
+        alerts[0].mitre_technique = "T1059"
+        alerts[0].evidence = [{"source_ip": "198.51.100.5", "username": "admin"}]
+        bundle = build_stix_bundle(alerts)
+        assert bundle["type"] == "bundle"
+        types = {o["type"] for o in bundle["objects"]}
+        assert "identity" in types
+        assert "indicator" in types
+        assert "sighting" in types
+        indicator = next(o for o in bundle["objects"] if o["type"] == "indicator")
+        assert indicator["spec_version"] == "2.1"
+        assert "198.51.100.5" in indicator["pattern"]
+        assert indicator["external_references"][0]["external_id"] == "T1059"
+
+    def test_export_round_trip(self):
+        import json
+
+        from threatlens.outputs.stix import export_stix_bundle
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            out = Path(f.name)
+        export_stix_bundle(_sample_alerts(), out)
+        data = json.loads(out.read_text(encoding="utf-8"))
+        assert data["type"] == "bundle"
+        assert len(data["objects"]) >= 3

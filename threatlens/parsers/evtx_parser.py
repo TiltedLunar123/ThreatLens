@@ -52,7 +52,7 @@ def _xml_to_dict(record_xml: str) -> dict:
         if channel_el is not None:
             result["Channel"] = channel_el.text or ""
 
-    # EventData block — extract named Data elements
+    # EventData block: extract named Data elements
     event_data: dict = {}
     ed = root.find(f"{NS}EventData")
     if ed is not None:

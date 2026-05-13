@@ -1,0 +1,30 @@
+title: Sensitive Privilege Granted to Non-System Account
+id: tl-priv-sedebug-01
+status: stable
+description: 4672 with SeDebugPrivilege / SeTcbPrivilege granted to an account other than SYSTEM or LOCAL SERVICE.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1134/
+logsource:
+    category: authentication
+    product: windows
+detection:
+    selection:
+        EventID: 4672
+        PrivilegeList|contains:
+            - 'SeDebugPrivilege'
+            - 'SeTcbPrivilege'
+            - 'SeTakeOwnershipPrivilege'
+            - 'SeLoadDriverPrivilege'
+    filter_system:
+        SubjectUserName:
+            - 'SYSTEM'
+            - 'LOCAL SERVICE'
+            - 'NETWORK SERVICE'
+    condition: selection and not filter_system
+level: high
+tags:
+    - attack.privilege_escalation
+    - attack.t1134
+falsepositives:
+    - Authorized debugging sessions by developers.

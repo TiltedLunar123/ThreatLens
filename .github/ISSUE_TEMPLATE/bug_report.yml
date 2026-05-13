@@ -1,0 +1,86 @@
+name: Bug report
+description: Report a bug in ThreatLens
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. Please fill in as much of
+        the form as you can. The fewer guesses needed during triage, the
+        faster the fix.
+
+  - type: input
+    id: version
+    attributes:
+      label: ThreatLens version
+      description: Output of `threatlens --version`.
+      placeholder: "threatlens 2.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Docker container
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command that triggered the bug
+      description: The exact command line, with paths sanitized if necessary.
+      render: shell
+      placeholder: "threatlens scan logs/security.evtx --min-severity high"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full traceback or error message.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal log sample
+      description: |
+        If the bug is parser or detection related, attach the smallest log
+        snippet that reproduces it. Sanitize any sensitive values first.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and this has not already been reported.
+          required: true
+        - label: I have read SECURITY.md and confirm this is not a security vulnerability.
+          required: true

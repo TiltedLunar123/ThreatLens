@@ -1,0 +1,32 @@
+title: Recon Tool Execution
+id: tl-disco-burst-01
+status: stable
+description: Single execution of a discovery binary commonly used during post-exploitation triage.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1082/
+    - https://attack.mitre.org/techniques/T1087/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith:
+            - '\whoami.exe'
+            - '\nltest.exe'
+            - '\net.exe'
+            - '\net1.exe'
+            - '\systeminfo.exe'
+            - '\dsquery.exe'
+            - '\nbtstat.exe'
+            - '\netstat.exe'
+    filter:
+        CommandLine|contains: 'help'
+    condition: selection and not filter
+level: medium
+tags:
+    - attack.discovery
+    - attack.t1082
+    - attack.t1087
+falsepositives:
+    - Helpdesk scripts.

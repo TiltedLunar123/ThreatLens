@@ -382,7 +382,7 @@ class TestSigmaRules:
                 "condition": "selection and not filter",
             },
         })
-        # Should match — no "legitimate" in the command
+        # Should match -no "legitimate" in the command
         events = [make_process_event(
             datetime(2025, 1, 15, 9, 0, 0),
             "powershell.exe",
@@ -391,7 +391,7 @@ class TestSigmaRules:
         alerts = rule.analyze(events)
         assert len(alerts) == 1
 
-        # Should NOT match — "legitimate" is in the command
+        # Should NOT match -"legitimate" is in the command
         events2 = [make_process_event(
             datetime(2025, 1, 15, 9, 0, 0),
             "powershell.exe",
@@ -868,7 +868,7 @@ class TestSigmaIntegration:
         assert len(alerts) >= 1
 
     def test_all_sigma_rules_against_sample_data(self):
-        """Run all sample Sigma rules against sample data — integration smoke test."""
+        """Run all sample Sigma rules against sample data -integration smoke test."""
         events = self._load_sample_events()
         if not events:
             return
@@ -877,14 +877,14 @@ class TestSigmaIntegration:
         total_alerts = []
         for rule in rules:
             total_alerts.extend(rule.analyze(events))
-        # The sample data contains encoded PS, SAM dump, and certutil — all 3 should fire
+        # The sample data contains encoded PS, SAM dump, and certutil -all 3 should fire
         assert len(total_alerts) >= 3
         severities = {a.severity.value for a in total_alerts}
         assert "critical" in severities
         assert "high" in severities
 
     def test_sigma_rules_against_mixed_data(self):
-        """Run against mixed enterprise log — should detect the embedded attacks."""
+        """Run against mixed enterprise log -should detect the embedded attacks."""
         from threatlens.parsers import load_events
         sample = Path(__file__).parent.parent / "sample_data" / "mixed_enterprise_log.json"
         if not sample.exists():
@@ -944,7 +944,7 @@ class TestSigmaCorpusValidation:
         rules = load_sigma_rules(sigma_dir)
         rule = next(r for r in rules if "Defender" in r.name)
 
-        # Should match — non-SYSTEM user modifying defender registry
+        # Should match -non-SYSTEM user modifying defender registry
         from threatlens.models import EventCategory, LogEvent
         event = LogEvent(
             timestamp=datetime(2025, 1, 15, 10, 0, 0),
@@ -959,7 +959,7 @@ class TestSigmaCorpusValidation:
         alerts = rule.analyze([event])
         assert len(alerts) >= 1
 
-        # Should NOT match — SYSTEM user (filtered out)
+        # Should NOT match -SYSTEM user (filtered out)
         event_system = LogEvent(
             timestamp=datetime(2025, 1, 15, 10, 0, 0),
             event_id=13,

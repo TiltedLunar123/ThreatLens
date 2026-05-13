@@ -1,0 +1,64 @@
+name: Feature request
+description: Propose a new detector, parser, output target, or CLI option
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: read CONTRIBUTING.md for the kinds of changes the
+        project is and is not looking for.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Detection module
+        - Parser
+        - Rule engine (YAML or Sigma)
+        - Output target
+        - CLI ergonomics
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: What problem does this solve?
+      description: |
+        Describe the analyst workflow or detection gap the feature would
+        close. Be concrete - a real log sample, a real MITRE technique, a
+        real SIEM that needs an adapter.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        How would the user invoke it? What does the output look like? If
+        this is a detector, what events does it consume and what alerts
+        does it produce?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing flags, tools, or workflows that almost cover this.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require ThreatLens to make outbound network calls during a scan.
+          required: true
+        - label: This does not add a new mandatory runtime dependency (optional extras are fine).
+          required: false

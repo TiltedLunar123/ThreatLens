@@ -7,6 +7,7 @@ import logging
 import sys
 
 # Re-export symbols that existing code and tests import from cli
+from threatlens import __version__
 from threatlens.allowlist import _alert_allowed, load_allowlist  # noqa: F401
 from threatlens.config import (  # noqa: F401
     _FORMAT_EXTENSIONS,
@@ -41,6 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
             "  threatlens rules\n"
         ),
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"threatlens {__version__}",
+    )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # --- scan command ---
@@ -66,6 +72,17 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--allowlist", type=str, default=None, help="Path to a YAML allowlist file for suppressing known-good alerts")
     scan_parser.add_argument("--profile", action="store_true", help="Output timing for each scan phase")
     scan_parser.add_argument("--plugin-dir", type=str, default=None, help="Path to a directory of custom Python detector plugins")
+    scan_parser.add_argument("--wazuh-url", type=str, default=None, help="Wazuh manager API URL (e.g. https://wazuh:55000)")
+    scan_parser.add_argument("--wazuh-user", type=str, default=None, help="Wazuh API username")
+    scan_parser.add_argument("--wazuh-password", type=str, default=None, help="Wazuh API password")
+    scan_parser.add_argument("--wazuh-token", type=str, default=None, help="Pre-issued Wazuh API bearer token (use instead of user/password)")
+    scan_parser.add_argument("--splunk-url", type=str, default=None, help="Splunk HEC URL (e.g. https://splunk:8088)")
+    scan_parser.add_argument("--splunk-token", type=str, default=None, help="Splunk HEC token")
+    scan_parser.add_argument("--splunk-index", type=str, default="main", help="Splunk HEC index (default: main)")
+    scan_parser.add_argument("--splunk-sourcetype", type=str, default="threatlens:alert", help="Splunk sourcetype")
+    scan_parser.add_argument("--navigator-layer", type=str, default=None, help="Write an ATT&CK Navigator JSON layer to this path")
+    scan_parser.add_argument("--stix", type=str, default=None, help="Write a STIX 2.1 bundle to this path")
+    scan_parser.add_argument("--insecure", action="store_true", help="Skip TLS verification for Wazuh / Splunk / Elasticsearch")
 
     # --- follow command ---
     follow_parser = subparsers.add_parser("follow", help="Real-time log tailing mode (like tail -f with detection)")
@@ -80,6 +97,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     # --- rules command ---
     subparsers.add_parser("rules", help="List all available detection rules")
+
+    # --- dashboard command ---
+    dash_parser = subparsers.add_parser("dashboard", help="Launch the Streamlit dashboard for a JSON report")
+    dash_parser.add_argument("report", type=str, help="Path to a ThreatLens JSON report")
+    dash_parser.add_argument("--port", type=int, default=8501, help="Port to bind the dashboard to (default: 8501)")
+    dash_parser.add_argument("--headless", action="store_true", help="Run Streamlit in headless mode (no browser auto-open)")
+    dash_parser.add_argument("--workdir", type=str, default=None, help="Directory to materialize the dashboard app into")
 
     return parser
 
@@ -116,6 +140,9 @@ def main() -> int:
         return run_follow(args)
     elif args.command == "rules":
         return run_rules()
+    elif args.command == "dashboard":
+        from threatlens.dashboard import run_dashboard
+        return run_dashboard(args)
     else:
         parser.print_help()
         return 0

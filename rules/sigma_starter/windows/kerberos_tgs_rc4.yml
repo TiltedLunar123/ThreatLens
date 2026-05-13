@@ -1,0 +1,23 @@
+title: Kerberoasting TGS Request with RC4
+id: tl-kerb-tgs-rc4-01
+status: stable
+description: 4769 TGS request encrypted with RC4 (0x17) for a non-machine account indicates kerberoasting.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1558/003/
+logsource:
+    category: authentication
+    product: windows
+detection:
+    selection:
+        EventID: 4769
+        TicketEncryptionType: '0x17'
+    filter_machine:
+        TargetUserName|endswith: '$'
+    condition: selection and not filter_machine
+level: high
+tags:
+    - attack.credential_access
+    - attack.t1558.003
+falsepositives:
+    - Legacy services that still require RC4 for compatibility.

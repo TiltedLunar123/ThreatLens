@@ -1,0 +1,21 @@
+title: Security Log Cleared
+id: tl-de-logclear-01
+status: stable
+description: Event ID 1102 indicates the Security log was cleared, a classic anti-forensics step.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1070/001/
+logsource:
+    category: system
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 1102
+    condition: selection
+level: critical
+tags:
+    - attack.defense_evasion
+    - attack.t1070.001
+falsepositives:
+    - Authorized log rotation in isolated environments.

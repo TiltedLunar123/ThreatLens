@@ -299,11 +299,89 @@ def generate(num_events: int = 1000, attack_chains: int = 3, noise_ratio: float 
     return events
 
 
+def _to_syslog_line(event: dict) -> str:
+    """Render one synthetic event as an RFC 5424 syslog line."""
+    ts = event["TimeCreated"]
+    if ts.endswith("Z"):
+        ts_iso = ts
+    else:
+        ts_iso = ts + "Z"
+    host = event.get("Computer", "unknown")
+    data = event.get("EventData", {})
+    user = data.get("TargetUserName") or data.get("SubjectUserName") or ""
+    ip = data.get("IpAddress", "")
+    eid = event.get("EventID")
+
+    if eid == 4625:
+        return (
+            f"<34>1 {ts_iso} {host} sshd 4567 - "
+            f"Failed password for invalid user {user} from {ip} port 41522 ssh2"
+        )
+    if eid == 4624:
+        return (
+            f"<86>1 {ts_iso} {host} sshd 4567 - "
+            f"Accepted password for {user} from {ip} port 41530 ssh2"
+        )
+    if eid == 4634:
+        return f"<86>1 {ts_iso} {host} sshd 4567 - session closed for user {user}"
+    if eid == 4672:
+        return (
+            f"<86>1 {ts_iso} {host} kernel - - "
+            f"granted privilege {data.get('PrivilegeList', '').replace(chr(10), ',')} to {user}"
+        )
+    if eid in (1, 4688):
+        cmd = data.get("CommandLine", data.get("NewProcessName", ""))
+        return f"<86>1 {ts_iso} {host} audit 6011 - {user}: exec {cmd}"
+    return f"<86>1 {ts_iso} {host} audit 6011 - {user}: event {eid}"
+
+
+def _to_cef_line(event: dict) -> str:
+    """Render one synthetic event as a CEF line."""
+    data = event.get("EventData", {})
+    eid = event.get("EventID", 0)
+    severity = 6
+    if eid in (1102, 7045, 4698, 4672):
+        severity = 7
+    name = {
+        4625: "Failed Logon",
+        4624: "Successful Logon",
+        4634: "Logoff",
+        4672: "Privilege Assignment",
+        4698: "Scheduled Task Created",
+        7045: "New Service",
+        1: "Process Create",
+        4688: "Process Create",
+    }.get(eid, f"Event {eid}")
+
+    ts = event.get("TimeCreated", "")
+    rt = ""
+    try:
+        from datetime import datetime
+        dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ")
+        rt = f"rt={int(dt.timestamp() * 1000)} "
+    except (ValueError, KeyError):
+        rt = ""
+
+    user = data.get("TargetUserName") or data.get("SubjectUserName") or ""
+    ip = data.get("IpAddress", "")
+    host = event.get("Computer", "")
+    return (
+        f"CEF:0|TiltedLunar|ThreatLens-Sample|1.0|{eid}|{name}|{severity}|"
+        f"{rt}src={ip} dhost={host} suser={user}"
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate synthetic log data for ThreatLens testing")
     parser.add_argument("--events", type=int, default=1000, help="Number of events to generate (default: 1000)")
     parser.add_argument("--attack-chains", type=int, default=3, help="Number of attack chains to embed (default: 3)")
     parser.add_argument("--noise-ratio", type=float, default=0.9, help="Ratio of benign events (default: 0.9)")
+    parser.add_argument(
+        "--format",
+        choices=["json", "syslog", "cef"],
+        default="json",
+        help="Output format (default: json)",
+    )
     parser.add_argument("-o", "--output", type=str, default=None, help="Output file path (default: stdout)")
     args = parser.parse_args()
 
@@ -313,13 +391,18 @@ def main() -> None:
         noise_ratio=args.noise_ratio,
     )
 
-    output = json.dumps(events, indent=2)
+    if args.format == "syslog":
+        output = "\n".join(_to_syslog_line(e) for e in events) + "\n"
+    elif args.format == "cef":
+        output = "\n".join(_to_cef_line(e) for e in events) + "\n"
+    else:
+        output = json.dumps(events, indent=2)
 
     if args.output:
         from pathlib import Path
         Path(args.output).parent.mkdir(parents=True, exist_ok=True)
         Path(args.output).write_text(output, encoding="utf-8")
-        print(f"Generated {len(events)} events -> {args.output}", file=sys.stderr)
+        print(f"Generated {len(events)} events ({args.format}) -> {args.output}", file=sys.stderr)
     else:
         print(output)
 

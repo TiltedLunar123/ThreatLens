@@ -1,0 +1,21 @@
+title: Windows Defender Real-Time Protection Disabled
+id: tl-de-defender-01
+status: stable
+description: Event ID 5001 indicates real-time protection was turned off.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1562/001/
+logsource:
+    category: application
+    product: windows
+    service: 'Microsoft-Windows-Windows Defender'
+detection:
+    selection:
+        EventID: 5001
+    condition: selection
+level: high
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001
+falsepositives:
+    - Endpoints temporarily switched to a third-party AV during migration.

@@ -3,6 +3,8 @@
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square" alt="Platform">
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License">
   <img src="https://github.com/TiltedLunar123/ThreatLens/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://codecov.io/gh/TiltedLunar123/ThreatLens/branch/main/graph/badge.svg" alt="Coverage">
+  <img src="https://img.shields.io/github/v/release/TiltedLunar123/ThreatLens?style=flat-square" alt="Release">
   <img src="https://img.shields.io/badge/MITRE%20ATT%26CK-mapped-red?style=flat-square" alt="MITRE ATT&CK">
   <img src="https://img.shields.io/badge/Sigma-compatible-blueviolet?style=flat-square" alt="Sigma Compatible">
   <img src="https://img.shields.io/badge/code%20style-ruff-000000?style=flat-square" alt="Ruff">
@@ -58,10 +60,13 @@ pip install -e ".[dev]"          # core + test dependencies
 pip install -e ".[evtx]"         # optional: native EVTX parsing
 ```
 
-### From PyPI
+### From a release wheel
+
+Once a tagged release is published, install the wheel from the
+[GitHub Releases page](https://github.com/TiltedLunar123/ThreatLens/releases):
 
 ```bash
-pip install threatlens
+pip install threatlens-2.2.0-py3-none-any.whl
 ```
 
 ### Docker
@@ -145,6 +150,11 @@ threatlens scan sample_data/sample_security_log.json
 | HTML | Self-contained report with SVG donut chart and expandable evidence |
 | Timeline | Interactive HTML attack timeline with hover tooltips |
 | Elasticsearch | Push alerts to an ES index via the bulk API (stdlib only, no client dependency) |
+| Wazuh | Send alerts to a Wazuh manager via the `/events` REST endpoint |
+| Splunk HEC | Push alerts to a Splunk indexer via the HTTP Event Collector |
+| ATT&CK Navigator | Emit a Navigator v4.5 JSON layer ready to load in the Navigator UI |
+| STIX 2.1 | Emit a bundle of indicator + sighting objects for threat-intel sharing |
+| Dashboard | Streamlit dashboard with severity, tactic, host, and rule filters |
 
 ---
 
@@ -203,6 +213,69 @@ threatlens scan logs/ --elastic-url http://localhost:9200
 threatlens scan logs/ --elastic-url https://es.internal:9200 \
   --elastic-index threatlens-2025 \
   --elastic-api-key YOUR_KEY
+```
+
+### Wazuh
+
+Push alerts straight into the Wazuh manager's events API.
+
+```bash
+threatlens scan logs/ --wazuh-url https://wazuh:55000 \
+  --wazuh-user analyst --wazuh-password ******
+
+# With a pre-issued bearer token instead of basic auth:
+threatlens scan logs/ --wazuh-url https://wazuh:55000 --wazuh-token "$TOKEN"
+```
+
+Add `--insecure` to bypass TLS verification in lab environments.
+
+### Splunk HTTP Event Collector
+
+```bash
+threatlens scan logs/ --splunk-url https://splunk:8088 \
+  --splunk-token "$HEC_TOKEN" \
+  --splunk-index security \
+  --splunk-sourcetype threatlens:alert
+```
+
+The connector batches all alerts into a single HEC request.
+
+### MITRE ATT&CK Navigator layer
+
+Emit a v4.5 Navigator layer that you can drop into the
+[ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/):
+
+```bash
+threatlens scan logs/ --navigator-layer scan_layer.json
+```
+
+Each technique that fired during the scan gets a score equal to the
+number of alerts that referenced it, with the gradient scaled to the
+busiest technique.
+
+### STIX 2.1 indicators
+
+```bash
+threatlens scan logs/ --stix scan.stix.json
+```
+
+Produces a STIX 2.1 bundle of `identity`, `indicator`, and `sighting`
+objects suitable for ingestion into MISP, OpenCTI, Anomali, or any
+TAXII 2.1 server.
+
+### Streamlit dashboard
+
+Generate a JSON report once, then explore it interactively:
+
+```bash
+threatlens scan logs/ -o report.json -f json
+threatlens dashboard report.json --port 8501
+```
+
+The dashboard requires the `dashboard` extra:
+
+```bash
+pip install -e ".[dashboard]"
 ```
 
 ### Real-Time Tailing
@@ -356,6 +429,20 @@ threatlens scan logs/ --profile
     Total:           0.44s
 ```
 
+### Synthetic corpus benchmarks
+
+Single-core Python 3.11 on a Windows 11 host, built-in detectors only:
+
+| Events | File size | Parse | Detect | Total | Throughput |
+|--------|-----------|-------|--------|-------|------------|
+|   9,009 |   2.3 MB |  0.09s |  0.04s |  0.13s | 69.3 k/s |
+|  90,145 |  22.6 MB |  0.89s |  0.38s |  1.27s | 71.0 k/s |
+| 901,341 | 226.2 MB |  9.90s |  4.32s | 14.24s | 63.3 k/s |
+
+Reproduce with `python scripts/benchmark.py --sizes 10000 100000 1000000`.
+See [docs/benchmark_results.md](docs/benchmark_results.md) for raw numbers
+and methodology.
+
 ---
 
 ## Writing Custom YAML Rules
@@ -442,6 +529,41 @@ Detection results from running ThreatLens against the included sample datasets:
 - **100% detection rate** on all embedded attack techniques
 - **Attack chain correlation** links activity across kill chain phases
 - All alerts include correct **MITRE ATT&CK** tactic and technique labels
+
+---
+
+## How ThreatLens Compares
+
+ThreatLens sits alongside several other open-source log triage tools. The
+table below is a candid comparison of where each lands. There is no
+"best" tool here, only different tradeoffs.
+
+| Capability | ThreatLens | Hayabusa | Chainsaw | Zircolite |
+|---|---|---|---|---|
+| Language | Python 3.10+ | Rust | Rust | Python 3.8+ |
+| Input formats | JSON, EVTX, Syslog, CEF | EVTX | EVTX, JSON | EVTX, JSON, auditd, Sysmon for Linux |
+| Sigma compatibility | Subset (selections, filters, conditions, modifiers, MITRE tags) | Full (sigma-rs engine) | Full (sigma-rs engine) | Full (compiled to SQL) |
+| Built-in detection rules | 12 modules, including multi-stage attack-chain correlation | Hayabusa built-in rule pack (~100s) | Detections via Sigma | Sigma only |
+| Custom rule formats | YAML (12 operators) + Sigma + Python plugins | Sigma + Hayabusa YAML | Sigma | Sigma |
+| Output targets | Terminal, JSON, CSV, HTML, timeline, Elasticsearch, Wazuh, Splunk HEC, ATT&CK Navigator, STIX 2.1, Streamlit dashboard | Terminal, CSV, JSONL | Terminal, JSON, CSV | JSONL, REST forwarder |
+| Real-time tailing | Yes (`follow` subcommand) | No | No | No |
+| Raw EVTX scan speed | ~ thousands of events/sec (Python) | Millions of events/min (Rust) | Millions of events/min (Rust) | ~ tens of thousands/sec (Python + SQLite) |
+| MITRE ATT&CK mapping | Per detector, per Sigma tag | Per rule | Per rule | Per rule |
+| Plugin / custom code | Yes (Python `DetectionRule` subclasses) | No | No | No |
+| License | MIT | GPL-3.0 | GPL-3.0 | LGPL-3.0 |
+
+**Choose ThreatLens when:** you need to triage a mix of Windows, Linux,
+and SIEM-export formats from a single tool; you want correlated
+multi-stage attack-chain alerts out of the box; you want to extend
+detection logic in Python without learning Sigma's grammar; or you need
+output adapters for several SIEM and threat-intel platforms at once.
+
+**Choose Hayabusa or Chainsaw when:** the workload is purely Windows
+EVTX and raw scan speed dominates everything else.
+
+**Choose Zircolite when:** you want to run ad-hoc SQL queries against
+parsed events and you are already comfortable with its SQLite-backed
+workflow.
 
 ---
 

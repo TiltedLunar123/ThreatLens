@@ -141,7 +141,7 @@ class YamlRule(DetectionRule):
                             rule_name=self.name,
                             severity=self._severity,
                             description=(
-                                f"{self.description} — {len(window)} matching event(s) "
+                                f"{self.description}: {len(window)} matching event(s) "
                                 f"for {self._group_by}='{group_key}'"
                             ),
                             timestamp=window[0].timestamp,
@@ -151,7 +151,7 @@ class YamlRule(DetectionRule):
                             recommendation=self._recommendation,
                         ))
         else:
-            # No grouping — threshold applies to total count
+            # No grouping: threshold applies to total count
             if self._threshold <= 1:
                 # One alert per matching event
                 for event in matching:
@@ -185,7 +185,7 @@ class YamlRule(DetectionRule):
                     rule_name=self.name,
                     severity=self._severity,
                     description=(
-                        f"{self.description} — {len(matching)} matching event(s)"
+                        f"{self.description}: {len(matching)} matching event(s)"
                     ),
                     timestamp=matching[0].timestamp,
                     evidence=evidence,

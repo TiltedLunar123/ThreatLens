@@ -43,7 +43,7 @@ class PrivilegeEscalationDetector(DetectionRule):
         if not priv_events:
             return []
 
-        # Group by user to deduplicate — one alert per user with all evidence
+        # Group by user to deduplicate so we emit one alert per user with all evidence
         user_data: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"events": [], "privs": set()}
         )

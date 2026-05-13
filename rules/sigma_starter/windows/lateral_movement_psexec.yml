@@ -1,0 +1,30 @@
+title: PsExec Service Installation
+id: tl-lat-psexec-01
+status: stable
+description: PSEXESVC or sysinternals PsExec service install indicates remote command execution.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1021/002/
+logsource:
+    category: system
+    product: windows
+    service: system
+detection:
+    selection:
+        EventID: 7045
+        ServiceName|contains:
+            - 'PSEXESVC'
+            - 'paexec'
+            - 'remcom'
+    selection_alt:
+        EventID: 7045
+        ImagePath|contains:
+            - '\PSEXESVC'
+            - 'psexec.exe'
+    condition: 1 of selection*
+level: high
+tags:
+    - attack.lateral_movement
+    - attack.t1021.002
+falsepositives:
+    - Admin-authorized remote-management tooling.

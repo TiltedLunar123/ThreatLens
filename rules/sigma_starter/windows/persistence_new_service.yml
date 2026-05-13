@@ -1,0 +1,28 @@
+title: New Service With Payload in Temp
+id: tl-pers-newsvc-01
+status: stable
+description: 7045 new service installation pointing at a binary under Temp, AppData, or Downloads.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1543/003/
+logsource:
+    category: system
+    product: windows
+    service: system
+detection:
+    selection:
+        EventID: 7045
+    payload:
+        ImagePath|contains:
+            - '\AppData\'
+            - '\Temp\'
+            - '\Downloads\'
+            - '\Users\Public\'
+            - 'powershell -enc'
+    condition: selection and payload
+level: high
+tags:
+    - attack.persistence
+    - attack.t1543.003
+falsepositives:
+    - Some installers temporarily stage in Temp.

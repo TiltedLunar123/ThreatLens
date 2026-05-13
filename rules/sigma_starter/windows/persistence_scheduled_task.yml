@@ -1,0 +1,28 @@
+title: Scheduled Task With Suspicious Payload
+id: tl-pers-schtask-01
+status: stable
+description: 4698 scheduled-task creation with a payload pointing into Temp, AppData, or PowerShell encoded args.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1053/005/
+logsource:
+    category: scheduled_task
+    product: windows
+detection:
+    selection:
+        EventID: 4698
+    payload:
+        TaskContent|contains:
+            - '\AppData\'
+            - '\Temp\'
+            - 'powershell -enc'
+            - 'powershell.exe -enc'
+            - 'mshta.exe'
+            - 'rundll32.exe'
+    condition: selection and payload
+level: high
+tags:
+    - attack.persistence
+    - attack.t1053.005
+falsepositives:
+    - Microsoft update tasks rarely match the payload list.

@@ -158,7 +158,7 @@ def _donut_chart_svg(counts: dict[str, int], size: int = 200) -> str:
     }
 
     paths = []
-    start_angle = -90  # Start from top
+    start_angle: float = -90.0  # Start from top
     import math
 
     for severity_name in ["critical", "high", "medium", "low"]:

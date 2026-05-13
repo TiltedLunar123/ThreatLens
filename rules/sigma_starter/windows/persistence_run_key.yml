@@ -1,0 +1,29 @@
+title: Suspicious Registry Run Key Value
+id: tl-pers-runkey-01
+status: stable
+description: New Run / RunOnce key value pointing to AppData, Temp, or Downloads.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+logsource:
+    category: registry_event
+    product: windows
+detection:
+    selection:
+        EventType: 'SetValue'
+        TargetObject|contains:
+            - '\CurrentVersion\Run\'
+            - '\CurrentVersion\RunOnce\'
+    payload:
+        Details|contains:
+            - '\AppData\Local\Temp\'
+            - '\Users\Public\'
+            - '\Downloads\'
+            - '\ProgramData\'
+    condition: selection and payload
+level: high
+tags:
+    - attack.persistence
+    - attack.t1547.001
+falsepositives:
+    - Some legitimate updaters place binaries under AppData.

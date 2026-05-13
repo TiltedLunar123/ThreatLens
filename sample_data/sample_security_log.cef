@@ -1,0 +1,15 @@
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920201000 src=198.51.100.5 dhost=DC-01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920205000 src=198.51.100.5 dhost=DC-01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920212000 src=198.51.100.5 dhost=DC-01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920218000 src=198.51.100.5 dhost=DC-01 suser=jdoe act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920225000 src=198.51.100.5 dhost=DC-01 suser=asmith act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920232000 src=198.51.100.5 dhost=DC-01 suser=bjones act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4625|Failed Logon|6|rt=1778920240000 src=198.51.100.5 dhost=DC-01 suser=mwilson act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4624|Successful Logon|3|rt=1778920252000 src=198.51.100.5 dhost=DC-01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4672|Privilege Assignment|7|rt=1778920260000 dhost=DC-01 suser=admin cs2Label=Privileges cs2=SeDebugPrivilege|SeTcbPrivilege
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4624|Successful Logon|3|rt=1778920295000 src=10.0.1.50 dhost=SRV-FILE01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4624|Successful Logon|3|rt=1778920308000 src=10.0.1.50 dhost=SRV-WEB01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4624|Successful Logon|3|rt=1778920321000 src=10.0.1.50 dhost=SRV-DB01 suser=admin act=NTLM_AUTH cs1Label=LogonType cs1=3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|1|Process Create|6|rt=1778920334000 dhost=SRV-DB01 suser=admin dproc=powershell.exe act=powershell.exe -enc SQBFAFgAIAAoAE4AZQB3
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|4698|Scheduled Task Created|7|rt=1778920360000 dhost=DC-01 suser=admin cs3Label=TaskName cs3=\\MaliciousTask
+CEF:0|TiltedLunar|ThreatLens-Sample|1.0|7045|New Service|7|rt=1778920380000 dhost=DC-01 suser=admin cs4Label=ServiceName cs4=UpdateSvc cs5Label=ImagePath cs5=C:\\Windows\\Temp\\payload.exe

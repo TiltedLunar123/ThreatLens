@@ -218,6 +218,56 @@ def run_scan(args: Any) -> int:
         )
         print(f"  Elasticsearch: {success} indexed, {errors} errors\n")
 
+    # Send to Wazuh if requested
+    wazuh_url = getattr(args, "wazuh_url", None)
+    if wazuh_url:
+        from threatlens.outputs.wazuh import send_to_wazuh
+        verify = not getattr(args, "insecure", False)
+        success, errors = send_to_wazuh(
+            filtered,
+            wazuh_url=wazuh_url,
+            total_events=len(all_events),
+            auth_token=getattr(args, "wazuh_token", None),
+            username=getattr(args, "wazuh_user", None),
+            password=getattr(args, "wazuh_password", None),
+            verify_ssl=verify,
+        )
+        print(f"  Wazuh: {success} sent, {errors} errors\n")
+
+    # Send to Splunk HEC if requested
+    splunk_url = getattr(args, "splunk_url", None)
+    if splunk_url:
+        splunk_token = getattr(args, "splunk_token", None)
+        if not splunk_token:
+            logger.error("--splunk-url requires --splunk-token")
+        else:
+            from threatlens.outputs.splunk import send_to_splunk
+            verify = not getattr(args, "insecure", False)
+            success, errors = send_to_splunk(
+                filtered,
+                hec_url=splunk_url,
+                token=splunk_token,
+                index=getattr(args, "splunk_index", "main"),
+                sourcetype=getattr(args, "splunk_sourcetype", "threatlens:alert"),
+                total_events=len(all_events),
+                verify_ssl=verify,
+            )
+            print(f"  Splunk: {success} sent, {errors} errors\n")
+
+    # ATT&CK Navigator layer
+    nav_path = getattr(args, "navigator_layer", None)
+    if nav_path:
+        from threatlens.outputs.navigator import export_navigator_layer
+        export_navigator_layer(filtered, Path(nav_path))
+        print(f"  Navigator layer saved to {nav_path}\n")
+
+    # STIX 2.1 bundle
+    stix_path = getattr(args, "stix", None)
+    if stix_path:
+        from threatlens.outputs.stix import export_stix_bundle
+        export_stix_bundle(filtered, Path(stix_path))
+        print(f"  STIX 2.1 bundle saved to {stix_path}\n")
+
     # Determine exit code based on --fail-on threshold (only when explicitly set)
     fail_on = getattr(args, "fail_on", None)
     if fail_on:

@@ -1,0 +1,23 @@
+title: rundll32.exe Without Arguments
+id: tl-exec-rundll32-01
+status: stable
+description: rundll32 launched with no arguments is a common Cobalt-Strike beacon fingerprint.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1218/011/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\rundll32.exe'
+        CommandLine|endswith:
+            - '\rundll32.exe'
+            - '\rundll32.exe '
+    condition: selection
+level: high
+tags:
+    - attack.defense_evasion
+    - attack.t1218.011
+falsepositives:
+    - Some installers spawn rundll32 with quoted empty args.

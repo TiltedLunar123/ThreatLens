@@ -111,7 +111,8 @@ class AttackChainDetector(DetectionRule):
                         e for e in all_stage_events[i:]
                         if e.timestamp <= window_end
                     ]
-                    window_stages = {_classify_stage(e) for e in window_events} - {None}
+                    window_stages_opt = {_classify_stage(e) for e in window_events} - {None}
+                    window_stages: set[str] = {s for s in window_stages_opt if s is not None}
                     if len(window_stages) >= self.min_stages:
                         alert = self._build_alert(user, window_events, window_stages)
                         if alert:

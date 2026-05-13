@@ -126,7 +126,7 @@ def export_timeline(
     # Date range label
     date_label = min_time.strftime("%Y-%m-%d")
     if min_time.date() != max_time.date():
-        date_label += f' — {max_time.strftime("%Y-%m-%d")}'
+        date_label += f' to {max_time.strftime("%Y-%m-%d")}'
 
     svg_content = "\n".join(ticks_html + rows_html)
 

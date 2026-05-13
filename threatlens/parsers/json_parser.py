@@ -1,4 +1,4 @@
-"""JSON/NDJSON log parser — extracted from the original parser module."""
+"""JSON/NDJSON log parser, extracted from the original parser module."""
 
 from __future__ import annotations
 

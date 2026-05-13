@@ -353,6 +353,41 @@ class TestSyslogParser:
         result = _parse_rfc5424("this is not rfc5424")
         assert result is None
 
+    def test_canonical_event_id_failed_password(self):
+        from threatlens.parsers.syslog_parser import _canonical_event_id
+
+        assert _canonical_event_id(
+            "Failed password for invalid user admin from 10.0.0.1", 34
+        ) == 4625
+        assert _canonical_event_id("authentication failure for bob", 34) == 4625
+        assert _canonical_event_id("Accepted password for jdoe from 10.0.0.1", 86) == 4624
+        assert _canonical_event_id("Accepted publickey for jdoe from 10.0.0.1", 86) == 4624
+        assert _canonical_event_id("session opened for user backup", 86) == 4624
+        assert _canonical_event_id("session closed for user backup", 86) == 4634
+        assert _canonical_event_id("nothing to see here", 99) == 99
+
+    def test_syslog_rfc3164_maps_failed_password_to_4625(self):
+        from threatlens.parsers.syslog_parser import _parse_rfc3164
+
+        line = (
+            "<34>Jan 15 08:30:01 server01 sshd[1234]: "
+            "Failed password for invalid user admin from 198.51.100.5 port 22 ssh2"
+        )
+        event = _parse_rfc3164(line)
+        assert event is not None
+        assert event.event_id == 4625
+
+    def test_syslog_rfc5424_maps_accepted_password_to_4624(self):
+        from threatlens.parsers.syslog_parser import _parse_rfc5424
+
+        line = (
+            "<86>1 2025-01-15T08:30:05Z server01 sshd 4567 - "
+            "Accepted password for jdoe from 10.0.1.10 port 22"
+        )
+        event = _parse_rfc5424(line)
+        assert event is not None
+        assert event.event_id == 4624
+
     def test_cef_no_cef_marker(self):
         from threatlens.parsers.syslog_parser import _parse_cef
 

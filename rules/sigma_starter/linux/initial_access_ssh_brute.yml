@@ -1,0 +1,20 @@
+title: SSH Invalid User Brute Force
+id: tl-init-sshbrute-01
+status: stable
+description: Repeated invalid-user SSH login attempts from a single source. Pairs with the built-in brute-force detector.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1110/001/
+logsource:
+    product: linux
+    service: sshd
+detection:
+    selection:
+        EventID: 4625
+    condition: selection
+level: medium
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+falsepositives:
+    - Misconfigured automation accidentally hitting wrong host with wrong user.

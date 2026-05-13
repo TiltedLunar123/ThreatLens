@@ -1,0 +1,25 @@
+title: certutil.exe Used as Download Cradle
+id: tl-exec-certutil-01
+status: stable
+description: certutil.exe invoked with urlcache/verifyctl/encode/decode flags, commonly used to pull payloads.
+author: Jude Hilgendorf
+references:
+    - https://attack.mitre.org/techniques/T1105/
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        Image|endswith: '\certutil.exe'
+        CommandLine|contains:
+            - 'urlcache'
+            - 'verifyctl'
+            - 'urlcache -f'
+            - 'urlcache -split -f'
+    condition: selection
+level: high
+tags:
+    - attack.command_and_control
+    - attack.t1105
+falsepositives:
+    - Internal CA tooling.

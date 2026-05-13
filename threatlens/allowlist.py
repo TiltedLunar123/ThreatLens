@@ -23,7 +23,9 @@ def load_allowlist(path: Path) -> list[dict[str, Any]]:
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     if isinstance(data, dict):
-        return data.get("allowlist", [])
+        entries = data.get("allowlist", [])
+        if isinstance(entries, list):
+            return [e for e in entries if isinstance(e, dict)]
     return []
 
 
@@ -57,5 +59,6 @@ def _alert_allowed(alert: Any, allowlist: list[dict[str, Any]]) -> str | None:
             if str(entry["event_id"]) not in event_ids:
                 match = False
         if match:
-            return entry.get("reason", "allowlisted")
+            reason = entry.get("reason", "allowlisted")
+            return str(reason) if reason is not None else "allowlisted"
     return None
