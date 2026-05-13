@@ -3,8 +3,8 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "threatlens"
-version = "2.2.0"
+name = "threatlens-cli"
+version = "2.2.1"
 description = "Log Analysis & Threat Hunting CLI"
 readme = "README.md"
 license = "MIT"

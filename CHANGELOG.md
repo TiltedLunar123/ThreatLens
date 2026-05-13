@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2026-05-13
+
+### Changed
+- Renamed PyPI distribution to `threatlens-cli`. The `threatlens` slot
+  on PyPI was already occupied by an unrelated project, so this release
+  cuts a fresh distribution name. The Python import name (`import
+  threatlens`) and the CLI command (`threatlens ...`) are unchanged.
+- Bumped fallback version in `threatlens/__init__.py` to match.
+
+### Fixed
+- Codecov upload step in CI now passes `CODECOV_TOKEN`. Tokenless
+  upload is no longer accepted for this repo.
+
 ## [2.2.0] - 2026-05-13
 
 ### Added
@@ -63,7 +76,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allowlist support for tuning out known-good alerts.
 - Docker image and GitHub Actions CI workflow.
 
-[Unreleased]: https://github.com/TiltedLunar123/ThreatLens/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/TiltedLunar123/ThreatLens/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.2.1
 [2.2.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.2.0
 [2.1.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.1.0
 [2.0.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.0.0

@@ -60,14 +60,15 @@ pip install -e ".[dev]"          # core + test dependencies
 pip install -e ".[evtx]"         # optional: native EVTX parsing
 ```
 
-### From a release wheel
-
-Once a tagged release is published, install the wheel from the
-[GitHub Releases page](https://github.com/TiltedLunar123/ThreatLens/releases):
+### From PyPI
 
 ```bash
-pip install threatlens-2.2.0-py3-none-any.whl
+pip install threatlens-cli
 ```
+
+The PyPI distribution is named `threatlens-cli` because the short
+`threatlens` slot was already taken by an unrelated MCP server project.
+The CLI command and the Python import name are still `threatlens`.
 
 ### Docker
 
