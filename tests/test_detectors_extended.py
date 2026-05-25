@@ -108,6 +108,25 @@ class TestDiscoveryDetector:
         assert len(alerts) == 1
         assert "Reconnaissance" in alerts[0].rule_name
 
+    def test_overlapping_recon_windows_are_not_skipped(self):
+        """Each event in a dense burst can start its own threshold-sized window."""
+        events = [
+            _evt(process_name="whoami.exe", username="attacker", ts_offset_s=0),
+            _evt(process_name="ipconfig.exe", username="attacker", ts_offset_s=10),
+            _evt(process_name="systeminfo.exe", username="attacker", ts_offset_s=20),
+            _evt(process_name="net.exe", username="attacker", ts_offset_s=30),
+            _evt(process_name="nltest.exe", username="attacker", ts_offset_s=40),
+        ]
+
+        alerts = DiscoveryDetector().analyze(events)
+
+        assert len(alerts) == 3
+        assert [alert.timestamp for alert in alerts] == [
+            events[0].timestamp,
+            events[1].timestamp,
+            events[2].timestamp,
+        ]
+
     def test_below_threshold_no_alert(self):
         """Only 2 recon commands should NOT trigger (threshold=3)."""
         events = [
