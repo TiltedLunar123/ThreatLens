@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Built-in defense evasion and persistence detectors now emit at most one alert
+  for a single event when multiple patterns inside the same detector match.
+
 ## [2.2.1] - 2026-05-13
 
 ### Changed

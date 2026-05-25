@@ -57,6 +57,7 @@ class DefenseEvasionDetector(DetectionRule):
                         "attacker technique to cover tracks."
                     ),
                 ))
+                continue
 
             # Windows Defender disabled
             if event.event_id == DEFENDER_DISABLED_ID:
@@ -81,6 +82,7 @@ class DefenseEvasionDetector(DetectionRule):
                         "endpoint protection is a strong indicator of compromise."
                     ),
                 ))
+                continue
 
             # Audit policy changes
             if event.event_id == AUDIT_POLICY_CHANGE_ID:
@@ -105,6 +107,7 @@ class DefenseEvasionDetector(DetectionRule):
                         "Attackers modify audit policies to reduce detection."
                     ),
                 ))
+                continue
 
             # Firewall rule modifications via command line
             cmd = event.command_line.lower() if event.command_line else ""

@@ -87,6 +87,16 @@ class TestDefenseEvasionDetector:
         assert len(alerts) == 1
         assert "Firewall" in alerts[0].rule_name
 
+    def test_single_event_reports_one_defense_evasion_alert(self):
+        events = [_evt(
+            event_id=1102,
+            username="attacker",
+            command_line="netsh advfirewall set allprofiles state off",
+            category=EventCategory.PROCESS,
+        )]
+        alerts = DefenseEvasionDetector().analyze(events)
+        assert [alert.rule_name for alert in alerts] == ["Log Clearing Detected"]
+
     def test_benign_events_no_alert(self):
         events = [_evt(event_id=4624, username="user")]
         alerts = DefenseEvasionDetector().analyze(events)
@@ -250,6 +260,20 @@ class TestPersistenceDetector:
         alerts = PersistenceDetector().analyze(events)
         assert len(alerts) >= 1
         assert any("Registry Run Key" in a.rule_name for a in alerts)
+
+    def test_registry_event_reports_one_persistence_alert(self):
+        events = [_evt(
+            event_id=13,
+            command_line='copy evil.lnk "C:\\Users\\Public\\Start Menu\\Programs\\Startup\\evil.lnk"',
+            raw={
+                "TargetObject": (
+                    "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\backdoor"
+                    "\\Startup\\evil.lnk"
+                ),
+            },
+        )]
+        alerts = PersistenceDetector().analyze(events)
+        assert [alert.rule_name for alert in alerts] == ["Registry Run Key Modified"]
 
     def test_benign_event_no_alert(self):
         events = [_evt(event_id=4624)]
