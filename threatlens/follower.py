@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -9,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from threatlens.config import _build_detectors, load_rules_config
-from threatlens.models import Severity
+from threatlens.models import Alert, Severity
 from threatlens.parsers import detect_format
 from threatlens.report import print_banner
 from threatlens.utils import bold, colorize
@@ -112,7 +113,7 @@ def _flush_follow_buffer(
             if severity_order.index(alert.severity) < min_index:
                 continue
 
-            alert_key = f"{alert.rule_name}|{alert.timestamp_str}"
+            alert_key = _follow_alert_key(alert)
             if alert_key in seen_alerts:
                 continue
             seen_alerts.add(alert_key)
@@ -123,3 +124,30 @@ def _flush_follow_buffer(
             if alert.mitre_technique:
                 print(f"    MITRE: {alert.mitre_tactic} / {alert.mitre_technique}")
             print()
+
+
+def _follow_alert_key(alert: Alert) -> str:
+    """Build a stable follow-mode deduplication key from alert content."""
+    payload = {
+        "rule_name": alert.rule_name,
+        "severity": alert.severity.value,
+        "description": alert.description,
+        "evidence": _normalize_follow_key_part(alert.evidence),
+        "mitre_tactic": alert.mitre_tactic,
+        "mitre_technique": alert.mitre_technique,
+        "recommendation": alert.recommendation,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return f"{alert.rule_name}|{hashlib.sha256(encoded.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _normalize_follow_key_part(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            str(key): _normalize_follow_key_part(item)
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            if str(key).lower() != "timestamp"
+        }
+    if isinstance(value, list):
+        return [_normalize_follow_key_part(item) for item in value]
+    return value
