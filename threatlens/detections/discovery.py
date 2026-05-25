@@ -95,8 +95,8 @@ class DiscoveryDetector(DetectionRule):
                             f"commands often indicates early-stage attacker activity."
                         ),
                     ))
-                    # Skip past this window
-                    i += len(window)
+                    # Keep sliding so overlapping recon bursts can be detected.
+                    i += 1
                 else:
                     i += 1
 
