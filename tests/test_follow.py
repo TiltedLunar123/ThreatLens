@@ -1,12 +1,22 @@
 """Tests for follow (real-time tailing) functionality."""
 
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from tests.conftest import make_failed_logon
 from threatlens.follower import _flush_follow_buffer
-from threatlens.models import Severity
+from threatlens.models import Alert, Severity
+
+
+class StaticDetector:
+    name = "Static"
+
+    def __init__(self, alerts):
+        self.alerts = alerts
+
+    def analyze(self, events):
+        return self.alerts
 
 
 class TestFlushFollowBuffer:
@@ -57,6 +67,61 @@ class TestFlushFollowBuffer:
         seen: set = set()
         # Should not raise
         _flush_follow_buffer(events, [BrokenDetector()], severity_order, 0, seen)
+
+    def test_flush_keeps_distinct_alerts_from_same_rule_and_second(self, capsys):
+        timestamp = datetime(2025, 1, 15, 8, 30, 0)
+        alerts = [
+            Alert(
+                rule_name="Repeated Login Failures",
+                severity=Severity.MEDIUM,
+                description="Repeated login failures",
+                timestamp=timestamp,
+                evidence=[{"timestamp": timestamp.isoformat(), "source_ip": "10.0.1.50"}],
+            ),
+            Alert(
+                rule_name="Repeated Login Failures",
+                severity=Severity.MEDIUM,
+                description="Repeated login failures",
+                timestamp=timestamp,
+                evidence=[{"timestamp": timestamp.isoformat(), "source_ip": "10.0.1.51"}],
+            ),
+        ]
+        severity_order = [Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
+        seen: set = set()
+
+        _flush_follow_buffer([], [StaticDetector(alerts)], severity_order, 0, seen)
+
+        output = capsys.readouterr().out
+        assert "10.0.1.50" in output
+        assert "10.0.1.51" in output
+
+    def test_flush_deduplicates_same_alert_with_different_second(self, capsys):
+        timestamp = datetime(2025, 1, 15, 8, 30, 0)
+        repeated_timestamp = timestamp + timedelta(seconds=1)
+        base_alert = Alert(
+            rule_name="Repeated Login Failures",
+            severity=Severity.MEDIUM,
+            description="5 failed logons from 10.0.1.50",
+            timestamp=timestamp,
+            evidence=[{"timestamp": timestamp.isoformat(), "source_ip": "10.0.1.50"}],
+        )
+        repeated_alert = Alert(
+            rule_name="Repeated Login Failures",
+            severity=Severity.MEDIUM,
+            description="5 failed logons from 10.0.1.50",
+            timestamp=repeated_timestamp,
+            evidence=[{"timestamp": repeated_timestamp.isoformat(), "source_ip": "10.0.1.50"}],
+        )
+        severity_order = [Severity.LOW, Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL]
+        seen: set = set()
+
+        _flush_follow_buffer([], [StaticDetector([base_alert])], severity_order, 0, seen)
+        first_output = capsys.readouterr().out
+        _flush_follow_buffer([], [StaticDetector([repeated_alert])], severity_order, 0, seen)
+        second_output = capsys.readouterr().out
+
+        assert "10.0.1.50" in first_output
+        assert second_output == ""
 
 
 class TestFollowWithMockAppends:

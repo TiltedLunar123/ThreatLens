@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Follow mode now deduplicates alerts by stable alert content instead of
+  second-level timestamps, so distinct alerts from the same rule are not hidden
+  when they occur in the same second.
+
 ## [2.2.1] - 2026-05-13
 
 ### Changed
