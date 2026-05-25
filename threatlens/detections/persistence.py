@@ -65,6 +65,7 @@ class PersistenceDetector(DetectionRule):
                         "Attackers create malicious services for persistence."
                     ),
                 ))
+                continue
 
             # Scheduled task creation
             if event.event_id == SCHEDULED_TASK_ID:
@@ -90,6 +91,7 @@ class PersistenceDetector(DetectionRule):
                         "tasks are a common persistence mechanism."
                     ),
                 ))
+                continue
 
             # Registry run key modifications (Sysmon Event ID 13)
             if event.event_id == SYSMON_REGISTRY_ID:
@@ -117,6 +119,7 @@ class PersistenceDetector(DetectionRule):
                             "execute programs at user logon."
                         ),
                     ))
+                    continue
 
             # Startup folder modifications
             cmd_lower = (event.command_line or "").lower()
