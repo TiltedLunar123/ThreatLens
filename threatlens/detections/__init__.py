@@ -6,6 +6,7 @@ from threatlens.detections.brute_force import BruteForceDetector
 from threatlens.detections.credential_access import CredentialAccessDetector
 from threatlens.detections.defense_evasion import DefenseEvasionDetector
 from threatlens.detections.discovery import DiscoveryDetector
+from threatlens.detections.dns_exfiltration import DnsExfiltrationDetector
 from threatlens.detections.exfiltration import ExfiltrationDetector
 from threatlens.detections.initial_access import InitialAccessDetector
 from threatlens.detections.kerberos_attacks import KerberosAttackDetector
@@ -23,6 +24,7 @@ ALL_DETECTORS: list[type[DetectionRule]] = [
     PersistenceDetector,
     DiscoveryDetector,
     ExfiltrationDetector,
+    DnsExfiltrationDetector,
     KerberosAttackDetector,
     CredentialAccessDetector,
     InitialAccessDetector,
@@ -37,6 +39,7 @@ __all__ = [
     "DefenseEvasionDetector",
     "DetectionRule",
     "DiscoveryDetector",
+    "DnsExfiltrationDetector",
     "ExfiltrationDetector",
     "InitialAccessDetector",
     "KerberosAttackDetector",

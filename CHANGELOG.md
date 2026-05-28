@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-05-28
+
+### Added
+- DNS exfiltration detector (`DnsExfiltrationDetector`) that flags bursts of
+  high-entropy DNS queries from a single host, mapped to MITRE T1048.003 /
+  T1071.004. Tunable via `dns_query_threshold`, `dns_window_seconds`,
+  `dns_min_label_length`, and `dns_min_entropy_bits` in the rules config.
+- Markdown report output (`--format md`) producing a self-contained `.md`
+  file with summary table, sortable alert table, and per-alert detail
+  sections.
+- `--exclude` flag on the `scan` subcommand to disable specific built-in
+  detectors by class name or display-name substring (repeatable). Useful
+  for tuning out noisy detectors without editing code.
+- `summary` subcommand that prints a quick severity breakdown and top-rule
+  ranking from a previously generated ThreatLens JSON report, no re-scan
+  required.
+
+### Changed
+- Rewrote `find_dense_windows` as a two-pointer sliding window. Worst-case
+  complexity drops from O(n^2) to O(n), giving a measurable speedup on
+  large corpora and tightening behavior so each event lands in at most one
+  returned window.
+
+### Fixed
+- Replaced `&mdash;` separators in HTML report and timeline outputs with
+  ASCII hyphens so generated reports render consistently in clients that
+  don't interpret named HTML entities.
+
 ## [2.2.1] - 2026-05-13
 
 ### Changed
@@ -76,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allowlist support for tuning out known-good alerts.
 - Docker image and GitHub Actions CI workflow.
 
-[Unreleased]: https://github.com/TiltedLunar123/ThreatLens/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/TiltedLunar123/ThreatLens/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.3.0
 [2.2.1]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.2.1
 [2.2.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.2.0
 [2.1.0]: https://github.com/TiltedLunar123/ThreatLens/releases/tag/v2.1.0

@@ -20,6 +20,13 @@ privilege_escalation:
 suspicious_process:
   # No additional config needed; uses built-in LOLBin and regex lists
 
+# ── DNS Exfiltration / Tunneling ───────────────────────────────────────
+dns_exfiltration:
+  dns_query_threshold: 25       # Suspicious queries per window to alert
+  dns_window_seconds: 60        # Sliding window size
+  dns_min_label_length: 20      # Min length of left-most subdomain label
+  dns_min_entropy_bits: 3.5     # Min Shannon entropy (bits) of that label
+
 # ── Attack Chain Correlation ────────────────────────────────────────────
 attack_chain:
   chain_window: 3600       # Seconds to look for multi-stage activity

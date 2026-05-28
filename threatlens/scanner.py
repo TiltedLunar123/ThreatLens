@@ -187,6 +187,9 @@ def run_scan(args: Any) -> int:
         elif args.format == "html":
             from threatlens.outputs.html_report import export_html
             export_html(filtered, output_path, len(all_events), elapsed)
+        elif args.format == "md":
+            from threatlens.outputs.markdown import export_markdown
+            export_markdown(filtered, output_path, len(all_events), elapsed)
         else:
             export_json(filtered, output_path, len(all_events))
         print(f"  Report saved to {output_path}\n")

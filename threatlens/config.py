@@ -71,8 +71,22 @@ def _build_detectors(
     """Build the list of detectors: built-in + custom YAML + Sigma + plugins."""
     detectors: list[Any] = []
 
+    # Normalize exclude list (case-insensitive substring match against
+    # class name OR display name).
+    raw_excludes = getattr(args, "exclude", None) or []
+    excludes = [e.lower() for e in raw_excludes if e]
+
+    def _is_excluded(cls: type) -> bool:
+        if not excludes:
+            return False
+        candidates = [cls.__name__.lower(), getattr(cls, "name", "").lower()]
+        return any(any(tok in c for c in candidates) for tok in excludes)
+
     # Built-in detectors
     for detector_cls in ALL_DETECTORS:
+        if _is_excluded(detector_cls):
+            logger.info("Excluding detector: %s", detector_cls.__name__)
+            continue
         flat_config: dict[str, Any] = {}
         for section in rules_config.values():
             if isinstance(section, dict):

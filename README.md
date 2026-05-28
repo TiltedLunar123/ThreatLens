@@ -103,6 +103,7 @@ threatlens scan sample_data/sample_security_log.json
 | Persistence | New services (7045), scheduled tasks (4698), registry Run key modifications, startup folder changes | T1543, T1053, T1547 |
 | Discovery / Reconnaissance | Rapid bursts of whoami, ipconfig, systeminfo, net, nltest, dsquery by the same user | T1082 |
 | Data Exfiltration | Suspicious archive creation (rar/7z/zip targeting sensitive paths), data staging patterns | T1560, T1074 |
+| DNS Exfiltration / Tunneling | Bursts of high-entropy DNS queries from a single host (Sysmon EID 22), with parent-domain rollup | T1048.003, T1071.004 |
 | Kerberos Attacks | Kerberoasting (TGS with RC4 for non-machine accounts), AS-REP Roasting (TGT with RC4) | T1558 |
 | Credential Access | LSASS memory access (Sysmon Event ID 10), SAM hive access (4663), DCSync (4662 with replication GUIDs) | T1003 |
 | Initial Access | External RDP logons (Event ID 4624 LogonType 10 from non-private IPs), after-hours logons | T1078 |
@@ -120,14 +121,14 @@ threatlens scan sample_data/sample_security_log.json
 | Credential Access | T1003 (OS Credential Dumping), T1110 (Brute Force), T1558 (Kerberos Tickets) |
 | Discovery | T1082 (System Information Discovery), T1087 (Account Discovery) |
 | Lateral Movement | T1021 (Remote Services) |
-| Exfiltration | T1560 (Archive Collected Data), T1074 (Data Staged) |
-| Command and Control | T1105 (Ingress Tool Transfer) |
+| Exfiltration | T1560 (Archive Collected Data), T1074 (Data Staged), T1048.003 (Exfil over Non-C2 Protocol) |
+| Command and Control | T1071.004 (DNS), T1105 (Ingress Tool Transfer) |
 
 ### Rule Engines
 
 | Engine | Description |
 |--------|------------|
-| Built-in detections | 12 modules tunable via `rules/default_rules.yaml` |
+| Built-in detections | 13 modules tunable via `rules/default_rules.yaml` |
 | Custom YAML rules | Field matching with 12 operators, grouping, thresholds, and time windows |
 | Sigma compatibility | Load community [Sigma rules](https://github.com/SigmaHQ/sigma) directly - selections, filters, conditions, field modifiers |
 | Plugin system | Load custom Python detectors from a directory with `--plugin-dir` |
@@ -189,7 +190,14 @@ threatlens scan logs/ --verbose
 threatlens scan logs/ -o report.json -f json
 threatlens scan logs/ -o report.csv  -f csv
 threatlens scan logs/ -o report.html -f html
+threatlens scan logs/ -o report.md   -f md
 threatlens scan logs/ --timeline timeline.html
+
+# Print a quick severity breakdown of an existing JSON report without re-scanning
+threatlens summary report.json
+
+# Disable a noisy built-in detector by class name or substring
+threatlens scan logs/ --exclude BruteForceDetector --exclude lateral
 ```
 
 ### Custom & Sigma Rules

@@ -82,35 +82,34 @@ def find_dense_windows(
     window_seconds: int,
     min_count: int,
 ) -> list[list[LogEvent]]:
-    """Find all maximal windows containing at least min_count events.
+    """Find non-overlapping windows containing at least min_count events.
 
-    Uses a sliding window approach and deduplicates overlapping windows.
-    Returns a list of event groups, each representing a dense burst.
+    Uses a two-pointer sliding window over chronologically sorted events.
+    Each event lands in at most one returned window, so total work is O(n).
     """
     if not events or min_count < 1:
         return []
 
     sorted_events = sorted(events, key=lambda e: e.timestamp)
+    n = len(sorted_events)
     results: list[list[LogEvent]] = []
-    used: set[int] = set()
 
-    for i in range(len(sorted_events)):
-        if i in used:
-            continue
+    left = 0
+    while left < n:
+        right = left
+        while (
+            right < n
+            and (sorted_events[right].timestamp - sorted_events[left].timestamp).total_seconds()
+            <= window_seconds
+        ):
+            right += 1
 
-        window: list[LogEvent] = []
-        window_indices: list[int] = []
-        for j in range(i, len(sorted_events)):
-            delta = (sorted_events[j].timestamp - sorted_events[i].timestamp).total_seconds()
-            if delta <= window_seconds:
-                window.append(sorted_events[j])
-                window_indices.append(j)
-            else:
-                break
-
-        if len(window) >= min_count:
-            results.append(window)
-            used.update(window_indices)
+        size = right - left
+        if size >= min_count:
+            results.append(list(sorted_events[left:right]))
+            left = right
+        else:
+            left += 1
 
     return results
 
