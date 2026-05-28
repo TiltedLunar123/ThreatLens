@@ -44,7 +44,7 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 completion = [
-    "argcomplete>=3.0",
+    "argcomplete>=3.6.3",
 ]
 
 [project.scripts]
