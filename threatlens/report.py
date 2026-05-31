@@ -19,7 +19,13 @@ def print_banner() -> None:
    | | | | | | | |  __/ (_| | |_| |__|  __/ | | \__ \
    |_| |_| |_|_|  \___|\__,_|\__|_____\___|_| |_|___/
     """
-    print(f"\033[96m{banner}\033[0m")
+    # Read the flag from utils at call time so --no-color applied after
+    # import is still honored.
+    from threatlens import utils as _utils
+    if _utils._no_color:
+        print(banner)
+    else:
+        print(f"\033[96m{banner}\033[0m")
     from threatlens import __version__
     print(f"  {bold('Log Analysis & Threat Hunting CLI')} v{__version__}\n")
 
@@ -104,10 +110,12 @@ def export_csv(alerts: list[Alert], output_path: Path, total_events: int = 0) ->
     """Export alerts to CSV format."""
     import csv
 
+    # Note: total_events is accepted for API compatibility but intentionally
+    # not written as a comment row -- standard CSV parsers (pandas, Excel)
+    # treat leading comment rows as data, which misaligned every column.
+    _ = total_events
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        # Write metadata row
-        writer.writerow(["# ThreatLens Report", f"Total Events: {total_events}", f"Total Alerts: {len(alerts)}"])
         writer.writerow([
             "Timestamp", "Severity", "Rule", "Description",
             "MITRE Tactic", "MITRE Technique", "Recommendation", "Evidence Count",
